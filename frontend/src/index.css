@@ -1,0 +1,1171 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 默认主题变量 - Crayon Warm 蜡笔画风格 */
+:root {
+  --surface-0: #fef6e8;
+  --surface-1: #fbf0d8;
+  --surface-2: #f7e4c8;
+  --surface-3: #f2d8b8;
+  --text-primary: #6b4423;
+  --text-secondary: #8a6030;
+  --text-muted: #b89060;
+  --accent: #e85d4c;
+  --accent-hover: #d04838;
+  --accent-green: #5d9c4a;
+  --accent-blue: #3a7cbd;
+  --accent-red: #d9453a;
+  --accent-yellow: #f0a020;
+  --border-color: #d4a060;
+  --theme-style: crayon-warm;
+  --crayon-stroke-1: #c07830;
+  --crayon-stroke-2: #a06020;
+  --crayon-highlight: #fff8e0;
+  --crayon-shadow: #e8d0a0;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body, #root { height: 100%; overflow: hidden; }
+
+/* ========================================
+   选中控制 - 只允许必要元素可选中
+   ======================================== */
+
+/* 默认禁止所有元素选中 */
+body {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 只允许以下元素选中 */
+input,
+textarea,
+[contenteditable="true"],
+.xterm,
+.selectable {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* 平滑滚动 */
+html {
+  scroll-behavior: smooth;
+}
+
+/* 自定义滚动条 - 蜡笔风格 */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track {
+  background: var(--surface-1);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--surface-3);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* 基础样式 */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background-color: var(--surface-0);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ========================================
+   蜡笔画纹理背景
+   ======================================== */
+
+/* 蜡笔画纸张纹理基础层 */
+.crayon-paper-texture {
+  position: relative;
+  background-color: var(--surface-0);
+}
+
+.crayon-paper-texture::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* 纸张纤维纹理 - 使用多层噪点 */
+  background-image:
+    /* 细微的纤维线条 */
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.01) 2px,
+      rgba(0,0,0,0.01) 4px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.01) 2px,
+      rgba(0,0,0,0.01) 4px
+    ),
+    /* 纸张颗粒感 */
+    radial-gradient(ellipse at 20% 30%, rgba(255,250,240,0.8) 0%, transparent 40%),
+    radial-gradient(ellipse at 80% 60%, rgba(250,240,220,0.6) 0%, transparent 35%),
+    radial-gradient(ellipse at 50% 80%, rgba(245,235,210,0.5) 0%, transparent 30%);
+  opacity: 1;
+}
+
+/* 蜡笔涂抹痕迹层 */
+.crayon-smudge-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* 蜡笔涂抹的随机痕迹 */
+  background-image:
+    /* 水平涂抹痕迹 */
+    linear-gradient(90deg,
+      transparent 0%,
+      transparent 10%,
+      rgba(240,180,100,0.03) 10%,
+      rgba(240,180,100,0.05) 12%,
+      transparent 14%,
+      transparent 30%,
+      rgba(230,200,150,0.04) 32%,
+      transparent 35%,
+      transparent 50%,
+      rgba(250,200,120,0.03) 52%,
+      transparent 55%,
+      transparent 70%,
+      rgba(220,190,140,0.05) 72%,
+      rgba(220,190,140,0.03) 75%,
+      transparent 78%,
+      transparent 100%
+    ),
+    /* 垂直涂抹痕迹 */
+    linear-gradient(180deg,
+      transparent 0%,
+      transparent 15%,
+      rgba(235,190,130,0.02) 17%,
+      transparent 20%,
+      transparent 40%,
+      rgba(245,200,140,0.03) 42%,
+      transparent 45%,
+      transparent 60%,
+      rgba(230,185,120,0.04) 63%,
+      transparent 68%,
+      transparent 85%,
+      rgba(240,195,135,0.02) 88%,
+      transparent 92%
+    );
+  opacity: 0.8;
+}
+
+/* 蜡笔斑点效果 */
+.crayon-spots {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* 模拟蜡笔画的颜色斑点 */
+  background-image:
+    radial-gradient(circle at 5% 15%, rgba(232,93,76,0.04) 0%, transparent 8%),
+    radial-gradient(circle at 95% 25%, rgba(93,156,74,0.03) 0%, transparent 6%),
+    radial-gradient(circle at 15% 45%, rgba(240,160,32,0.04) 0%, transparent 7%),
+    radial-gradient(circle at 85% 55%, rgba(58,124,189,0.03) 0%, transparent 5%),
+    radial-gradient(circle at 25% 75%, rgba(232,93,76,0.03) 0%, transparent 6%),
+    radial-gradient(circle at 75% 85%, rgba(168,85,168,0.04) 0%, transparent 8%),
+    radial-gradient(circle at 45% 35%, rgba(42,157,143,0.03) 0%, transparent 5%),
+    radial-gradient(circle at 65% 10%, rgba(240,160,32,0.03) 0%, transparent 7%),
+    radial-gradient(circle at 35% 90%, rgba(93,156,74,0.04) 0%, transparent 6%),
+    radial-gradient(circle at 90% 70%, rgba(232,93,76,0.02) 0%, transparent 5%);
+}
+
+/* ========================================
+   蜡笔画纹理背景 - 纸张磨砂质感
+   ======================================== */
+
+/* 暖色蜡笔主题纹理层 - 增强版纸张磨砂质感 */
+html[data-theme-style="crayon-warm"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  background:
+    /* 1. 纸张纤维纹理 - 多方向细密线条 */
+    repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      transparent 0.8px,
+      rgba(139, 90, 43, 0.06) 0.8px,
+      rgba(139, 90, 43, 0.06) 1.2px,
+      transparent 1.2px,
+      transparent 2px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      transparent 0.8px,
+      rgba(139, 90, 43, 0.05) 0.8px,
+      rgba(139, 90, 43, 0.05) 1.2px,
+      transparent 1.2px,
+      transparent 2px
+    ),
+    repeating-linear-gradient(
+      45deg,
+      transparent 0px,
+      transparent 0.4px,
+      rgba(160, 100, 50, 0.04) 0.4px,
+      rgba(160, 100, 50, 0.04) 0.8px,
+      transparent 0.8px,
+      transparent 1.5px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent 0px,
+      transparent 0.4px,
+      rgba(140, 80, 40, 0.04) 0.4px,
+      rgba(140, 80, 40, 0.04) 0.8px,
+      transparent 0.8px,
+      transparent 1.5px
+    ),
+    /* 2. 纸张颗粒感 - 随机分布的小点 */
+    radial-gradient(circle at 10% 10%, rgba(120, 80, 40, 0.08) 0%, transparent 1.5%),
+    radial-gradient(circle at 25% 5%, rgba(100, 70, 35, 0.07) 0%, transparent 1.2%),
+    radial-gradient(circle at 40% 12%, rgba(130, 85, 45, 0.08) 0%, transparent 1.8%),
+    radial-gradient(circle at 55% 8%, rgba(110, 75, 38, 0.07) 0%, transparent 1.4%),
+    radial-gradient(circle at 70% 15%, rgba(125, 82, 42, 0.08) 0%, transparent 1.6%),
+    radial-gradient(circle at 85% 6%, rgba(105, 72, 36, 0.07) 0%, transparent 1.1%),
+    radial-gradient(circle at 95% 18%, rgba(135, 88, 46, 0.08) 0%, transparent 1.5%),
+    radial-gradient(circle at 5% 25%, rgba(115, 78, 40, 0.07) 0%, transparent 1.2%),
+    radial-gradient(circle at 18% 30%, rgba(128, 84, 44, 0.08) 0%, transparent 1.9%),
+    radial-gradient(circle at 32% 22%, rgba(108, 74, 37, 0.07) 0%, transparent 1.4%),
+    radial-gradient(circle at 48% 28%, rgba(122, 81, 41, 0.08) 0%, transparent 1.6%),
+    radial-gradient(circle at 62% 35%, rgba(118, 79, 39, 0.08) 0%, transparent 1.5%),
+    radial-gradient(circle at 78% 26%, rgba(132, 86, 45, 0.07) 0%, transparent 1.2%),
+    radial-gradient(circle at 92% 32%, rgba(112, 76, 38, 0.08) 0%, transparent 1.7%),
+    radial-gradient(circle at 8% 45%, rgba(125, 83, 43, 0.08) 0%, transparent 1.5%),
+    radial-gradient(circle at 22% 52%, rgba(105, 73, 36, 0.07) 0%, transparent 1.3%),
+    radial-gradient(circle at 38% 48%, rgba(130, 85, 44, 0.08) 0%, transparent 1.6%),
+    radial-gradient(circle at 52% 55%, rgba(115, 77, 39, 0.08) 0%, transparent 1.9%),
+    radial-gradient(circle at 68% 42%, rgba(120, 80, 40, 0.07) 0%, transparent 1.2%),
+    radial-gradient(circle at 82% 58%, rgba(138, 90, 47, 0.08) 0%, transparent 1.5%),
+    radial-gradient(circle at 95% 50%, rgba(110, 75, 38, 0.07) 0%, transparent 1.1%),
+    radial-gradient(circle at 12% 68%, rgba(127, 84, 43, 0.08) 0%, transparent 1.7%),
+    radial-gradient(circle at 28% 75%, rgba(117, 79, 40, 0.07) 0%, transparent 1.4%),
+    radial-gradient(circle at 45% 72%, rgba(135, 88, 46, 0.08) 0%, transparent 1.6%),
+    radial-gradient(circle at 58% 78%, rgba(108, 74, 37, 0.08) 0%, transparent 1.5%),
+    radial-gradient(circle at 72% 65%, rgba(123, 82, 42, 0.07) 0%, transparent 1.2%),
+    radial-gradient(circle at 88% 72%, rgba(113, 76, 38, 0.08) 0%, transparent 1.7%),
+    radial-gradient(circle at 5% 85%, rgba(131, 86, 45, 0.08) 0%, transparent 1.4%),
+    radial-gradient(circle at 20% 92%, rgba(119, 80, 41, 0.07) 0%, transparent 1.6%),
+    radial-gradient(circle at 35% 88%, rgba(106, 73, 36, 0.08) 0%, transparent 1.2%),
+    radial-gradient(circle at 50% 95%, rgba(129, 85, 44, 0.08) 0%, transparent 1.5%),
+    radial-gradient(circle at 65% 82%, rgba(111, 75, 38, 0.07) 0%, transparent 1.3%),
+    radial-gradient(circle at 80% 90%, rgba(126, 83, 43, 0.08) 0%, transparent 1.7%),
+    radial-gradient(circle at 92% 85%, rgba(116, 78, 40, 0.07) 0%, transparent 1.1%),
+    /* 3. 蜡笔涂抹痕迹 */
+    linear-gradient(
+      175deg,
+      transparent 0%,
+      rgba(255, 250, 240, 0.35) 3%,
+      transparent 6%,
+      rgba(254, 248, 235, 0.3) 12%,
+      transparent 15%,
+      rgba(253, 245, 230, 0.32) 22%,
+      transparent 25%,
+      rgba(252, 242, 225, 0.28) 32%,
+      transparent 35%,
+      rgba(255, 248, 238, 0.3) 42%,
+      transparent 45%,
+      rgba(254, 245, 232, 0.32) 52%,
+      transparent 55%,
+      rgba(253, 242, 228, 0.28) 62%,
+      transparent 65%,
+      rgba(255, 247, 235, 0.3) 72%,
+      transparent 75%,
+      rgba(254, 244, 230, 0.32) 82%,
+      transparent 85%,
+      rgba(252, 241, 225, 0.28) 92%,
+      transparent 95%
+    ),
+    /* 4. 蜡笔色彩斑点 */
+    radial-gradient(ellipse 10% 6% at 15% 20%, rgba(232, 93, 76, 0.1) 0%, transparent 100%),
+    radial-gradient(ellipse 8% 5% at 85% 15%, rgba(93, 156, 74, 0.08) 0%, transparent 100%),
+    radial-gradient(ellipse 9% 5% at 25% 60%, rgba(240, 160, 32, 0.08) 0%, transparent 100%),
+    radial-gradient(ellipse 7% 4% at 75% 70%, rgba(58, 124, 189, 0.07) 0%, transparent 100%),
+    radial-gradient(ellipse 8% 5% at 50% 40%, rgba(168, 85, 168, 0.07) 0%, transparent 100%),
+    radial-gradient(ellipse 6% 4% at 35% 85%, rgba(232, 93, 76, 0.06) 0%, transparent 100%),
+    radial-gradient(ellipse 7% 4% at 65% 30%, rgba(240, 160, 32, 0.06) 0%, transparent 100%),
+    /* 5. 纸张高光区域 */
+    radial-gradient(ellipse 45% 35% at 25% 25%, rgba(255, 255, 255, 0.18) 0%, transparent 100%),
+    radial-gradient(ellipse 40% 30% at 75% 75%, rgba(255, 250, 240, 0.12) 0%, transparent 100%);
+  background-color: transparent;
+}
+
+/* 暗色蜡笔主题纹理层 - 增强版纸张磨砂质感 */
+html[data-theme-style="crayon-dark"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  background:
+    /* 纸张纤维纹理 */
+    repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      transparent 0.8px,
+      rgba(140, 120, 180, 0.08) 0.8px,
+      rgba(140, 120, 180, 0.08) 1.2px,
+      transparent 1.2px,
+      transparent 2px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      transparent 0.8px,
+      rgba(130, 110, 170, 0.07) 0.8px,
+      rgba(130, 110, 170, 0.07) 1.2px,
+      transparent 1.2px,
+      transparent 2px
+    ),
+    repeating-linear-gradient(
+      45deg,
+      transparent 0px,
+      transparent 0.4px,
+      rgba(150, 130, 190, 0.05) 0.4px,
+      rgba(150, 130, 190, 0.05) 0.8px,
+      transparent 0.8px,
+      transparent 1.5px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent 0px,
+      transparent 0.4px,
+      rgba(120, 100, 160, 0.05) 0.4px,
+      rgba(120, 100, 160, 0.05) 0.8px,
+      transparent 0.8px,
+      transparent 1.5px
+    ),
+    /* 纸张颗粒感 */
+    radial-gradient(circle at 10% 10%, rgba(180, 150, 220, 0.1) 0%, transparent 1.5%),
+    radial-gradient(circle at 25% 5%, rgba(160, 130, 200, 0.09) 0%, transparent 1.2%),
+    radial-gradient(circle at 40% 12%, rgba(190, 160, 230, 0.1) 0%, transparent 1.8%),
+    radial-gradient(circle at 55% 8%, rgba(170, 140, 210, 0.09) 0%, transparent 1.4%),
+    radial-gradient(circle at 70% 15%, rgba(185, 155, 225, 0.1) 0%, transparent 1.6%),
+    radial-gradient(circle at 85% 6%, rgba(165, 135, 205, 0.09) 0%, transparent 1.1%),
+    radial-gradient(circle at 95% 18%, rgba(195, 165, 235, 0.1) 0%, transparent 1.5%),
+    radial-gradient(circle at 5% 25%, rgba(175, 145, 215, 0.09) 0%, transparent 1.2%),
+    radial-gradient(circle at 18% 30%, rgba(188, 158, 228, 0.1) 0%, transparent 1.9%),
+    radial-gradient(circle at 32% 22%, rgba(168, 138, 208, 0.09) 0%, transparent 1.4%),
+    radial-gradient(circle at 48% 28%, rgba(182, 152, 222, 0.1) 0%, transparent 1.6%),
+    radial-gradient(circle at 62% 35%, rgba(178, 148, 218, 0.1) 0%, transparent 1.5%),
+    radial-gradient(circle at 78% 26%, rgba(192, 162, 232, 0.09) 0%, transparent 1.2%),
+    radial-gradient(circle at 92% 32%, rgba(172, 142, 212, 0.1) 0%, transparent 1.7%),
+    radial-gradient(circle at 8% 45%, rgba(185, 155, 225, 0.1) 0%, transparent 1.5%),
+    radial-gradient(circle at 22% 52%, rgba(165, 135, 205, 0.09) 0%, transparent 1.3%),
+    radial-gradient(circle at 38% 48%, rgba(190, 160, 230, 0.1) 0%, transparent 1.6%),
+    radial-gradient(circle at 52% 55%, rgba(175, 145, 215, 0.1) 0%, transparent 1.9%),
+    radial-gradient(circle at 68% 42%, rgba(180, 150, 220, 0.09) 0%, transparent 1.2%),
+    radial-gradient(circle at 82% 58%, rgba(198, 168, 238, 0.1) 0%, transparent 1.5%),
+    radial-gradient(circle at 95% 50%, rgba(170, 140, 210, 0.09) 0%, transparent 1.1%),
+    radial-gradient(circle at 12% 68%, rgba(187, 157, 227, 0.1) 0%, transparent 1.7%),
+    radial-gradient(circle at 28% 75%, rgba(177, 147, 217, 0.09) 0%, transparent 1.4%),
+    radial-gradient(circle at 45% 72%, rgba(195, 165, 235, 0.1) 0%, transparent 1.6%),
+    radial-gradient(circle at 58% 78%, rgba(168, 138, 208, 0.1) 0%, transparent 1.5%),
+    radial-gradient(circle at 72% 65%, rgba(183, 153, 223, 0.09) 0%, transparent 1.2%),
+    radial-gradient(circle at 88% 72%, rgba(173, 143, 213, 0.1) 0%, transparent 1.7%),
+    radial-gradient(circle at 5% 85%, rgba(193, 163, 233, 0.1) 0%, transparent 1.4%),
+    radial-gradient(circle at 20% 92%, rgba(179, 149, 219, 0.09) 0%, transparent 1.6%),
+    radial-gradient(circle at 35% 88%, rgba(166, 136, 206, 0.1) 0%, transparent 1.2%),
+    radial-gradient(circle at 50% 95%, rgba(191, 161, 231, 0.1) 0%, transparent 1.5%),
+    radial-gradient(circle at 65% 82%, rgba(171, 141, 211, 0.09) 0%, transparent 1.3%),
+    radial-gradient(circle at 80% 90%, rgba(186, 156, 226, 0.1) 0%, transparent 1.7%),
+    radial-gradient(circle at 92% 85%, rgba(176, 146, 216, 0.09) 0%, transparent 1.1%),
+    /* 蜡笔涂抹痕迹 */
+    linear-gradient(
+      175deg,
+      transparent 0%,
+      rgba(35, 28, 48, 0.35) 3%,
+      transparent 6%,
+      rgba(32, 26, 44, 0.3) 12%,
+      transparent 15%,
+      rgba(38, 30, 52, 0.32) 22%,
+      transparent 25%,
+      rgba(30, 24, 42, 0.28) 32%,
+      transparent 35%,
+      rgba(36, 28, 50, 0.3) 42%,
+      transparent 45%,
+      rgba(33, 26, 46, 0.32) 52%,
+      transparent 55%,
+      rgba(38, 30, 52, 0.28) 62%,
+      transparent 65%,
+      rgba(34, 27, 48, 0.3) 72%,
+      transparent 75%,
+      rgba(31, 25, 43, 0.32) 82%,
+      transparent 85%,
+      rgba(37, 29, 51, 0.28) 92%,
+      transparent 95%
+    ),
+    /* 蜡笔色彩斑点 */
+    radial-gradient(ellipse 10% 6% at 15% 20%, rgba(240, 168, 120, 0.12) 0%, transparent 100%),
+    radial-gradient(ellipse 8% 5% at 85% 15%, rgba(112, 192, 128, 0.1) 0%, transparent 100%),
+    radial-gradient(ellipse 9% 5% at 25% 60%, rgba(240, 200, 80, 0.1) 0%, transparent 100%),
+    radial-gradient(ellipse 7% 4% at 75% 70%, rgba(112, 160, 240, 0.09) 0%, transparent 100%),
+    radial-gradient(ellipse 8% 5% at 50% 40%, rgba(208, 128, 208, 0.09) 0%, transparent 100%),
+    radial-gradient(ellipse 6% 4% at 35% 85%, rgba(240, 168, 120, 0.08) 0%, transparent 100%),
+    radial-gradient(ellipse 7% 4% at 65% 30%, rgba(112, 192, 128, 0.08) 0%, transparent 100%),
+    /* 光晕 */
+    radial-gradient(ellipse 45% 35% at 25% 25%, rgba(80, 60, 120, 0.15) 0%, transparent 100%),
+    radial-gradient(ellipse 40% 30% at 75% 75%, rgba(60, 50, 90, 0.12) 0%, transparent 100%);
+  background-color: transparent;
+}
+
+/* ========================================
+   暖色蜡笔主题背景颜色
+   ======================================== */
+
+/* 暖色蜡笔主题 - 应用到实际可见的容器 */
+html[data-theme-style="crayon-warm"] body,
+html[data-theme-style="crayon-warm"] #root,
+html[data-theme-style="crayon-warm"] .bg-surface-0 {
+  background-color: #fef6e8 !important;
+}
+
+/* 暖色蜡笔主题的侧边栏颜色 */
+html[data-theme-style="crayon-warm"] .bg-surface-1 {
+  background-color: #fbf0d8 !important;
+}
+
+html[data-theme-style="crayon-warm"] .bg-surface-2 {
+  background-color: #f7e4c8 !important;
+}
+
+/* ========================================
+   暗色蜡笔主题背景颜色
+   ======================================== */
+
+/* 暗色蜡笔主题 - 应用到实际可见的容器 */
+html[data-theme-style="crayon-dark"] body,
+html[data-theme-style="crayon-dark"] #root,
+html[data-theme-style="crayon-dark"] .bg-surface-0 {
+  background-color: #1a1625 !important;
+}
+
+/* 暗色蜡笔主题的侧边栏颜色 */
+html[data-theme-style="crayon-dark"] .bg-surface-1 {
+  background-color: #221e30 !important;
+}
+
+html[data-theme-style="crayon-dark"] .bg-surface-2 {
+  background-color: #2a2638 !important;
+}
+
+/* ========================================
+   蜡笔画风格主题样式
+   ======================================== */
+
+/* 蜡笔边框效果 - 模拟蜡笔线条的不规则边缘 */
+.crayon-border {
+  position: relative;
+}
+
+.crayon-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    var(--crayon-stroke-1) 0%,
+    var(--crayon-stroke-2) 50%,
+    var(--crayon-stroke-1) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  /* 蜡笔不规则边缘 */
+  filter: url(#crayon-texture);
+  opacity: 0.8;
+}
+
+/* 蜡笔涂抹背景 */
+.crayon-bg {
+  position: relative;
+}
+
+.crayon-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 30%, var(--crayon-highlight) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, var(--crayon-shadow) 0%, transparent 50%);
+  opacity: 0.3;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* 蜡笔按钮效果 */
+.crayon-button {
+  position: relative;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  /* 蜡笔涂抹阴影 */
+  box-shadow:
+    2px 2px 0 var(--crayon-stroke-2),
+    4px 4px 8px rgba(0,0,0,0.15);
+}
+
+.crayon-button:hover {
+  transform: translate(-1px, -1px);
+  box-shadow:
+    3px 3px 0 var(--crayon-stroke-2),
+    6px 6px 12px rgba(0,0,0,0.2);
+}
+
+.crayon-button:active {
+  transform: translate(1px, 1px);
+  box-shadow:
+    1px 1px 0 var(--crayon-stroke-2),
+    2px 2px 4px rgba(0,0,0,0.1);
+}
+
+/* 蜡笔卡片效果 */
+.crayon-card {
+  background: var(--surface-1);
+  border-radius: 12px;
+  /* 模拟蜡笔涂抹的多层效果 */
+  box-shadow:
+    0 2px 4px rgba(0,0,0,0.05),
+    0 4px 8px rgba(0,0,0,0.03),
+    inset 0 1px 0 rgba(255,255,255,0.5);
+  border: 2px solid transparent;
+  background-image:
+    linear-gradient(var(--surface-1), var(--surface-1)),
+    linear-gradient(135deg, var(--crayon-stroke-1), var(--crayon-stroke-2));
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+}
+
+/* 蜡笔输入框 */
+.crayon-input {
+  background: var(--surface-0);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  /* 蜡笔质感 */
+  box-shadow: inset 1px 2px 4px rgba(0,0,0,0.05);
+}
+
+.crayon-input:focus {
+  border-color: var(--accent);
+  box-shadow:
+    inset 1px 2px 4px rgba(0,0,0,0.05),
+    0 0 0 3px rgba(232, 93, 76, 0.2);
+}
+
+.crayon-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* 蜡笔分隔线 - 模拟蜡笔画出的线条 */
+.crayon-divider {
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--crayon-stroke-1) 10%,
+    var(--crayon-stroke-2) 50%,
+    var(--crayon-stroke-1) 90%,
+    transparent 100%
+  );
+  opacity: 0.6;
+  border-radius: 1px;
+  /* 蜡笔涂抹效果 */
+  filter: blur(0.3px);
+}
+
+/* 蜡笔标签页效果 */
+.crayon-tab {
+  position: relative;
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.crayon-tab::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 10%;
+  right: 10%;
+  height: 3px;
+  background: var(--accent);
+  border-radius: 3px 3px 0 0;
+  transform: scaleX(0);
+  transition: transform 0.2s ease;
+  /* 蜡笔涂抹感 */
+  box-shadow: 0 -2px 4px rgba(232, 93, 76, 0.3);
+}
+
+.crayon-tab:hover {
+  color: var(--text-primary);
+}
+
+.crayon-tab.active {
+  color: var(--accent);
+}
+
+.crayon-tab.active::after {
+  transform: scaleX(1);
+}
+
+/* ========================================
+   应用层样式
+   ======================================== */
+
+/* 侧边栏项目样式 */
+.sidebar-item {
+  @apply flex items-center gap-2 px-3 py-2 cursor-pointer rounded-lg mx-2 transition-all duration-150;
+  background-color: transparent;
+  color: var(--text-secondary);
+  position: relative;
+}
+
+.sidebar-item:hover {
+  background-color: var(--surface-2);
+  color: var(--text-primary);
+}
+
+/* 蜡笔主题下的侧边栏项目 */
+html[data-theme-style="crayon-warm"] .sidebar-item:hover,
+html[data-theme-style="crayon-dark"] .sidebar-item:hover {
+  box-shadow: inset 2px 2px 4px rgba(255,255,255,0.1);
+}
+
+/* 输入框样式 */
+.input-field {
+  @apply w-full px-3 py-2 rounded-lg text-sm transition-all duration-150;
+  background-color: var(--surface-0);
+  border: 1px solid var(--surface-3);
+  color: var(--text-primary);
+}
+
+.input-field::placeholder {
+  color: var(--text-muted);
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+/* 下拉选择框样式 */
+select.input-field {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 32px;
+  cursor: pointer;
+}
+
+select.input-field option {
+  background-color: var(--surface-1);
+  color: var(--text-primary);
+  padding: 8px;
+}
+
+/* 按钮样式 */
+.btn {
+  @apply px-4 py-2 rounded-lg font-medium transition-all duration-150 disabled:opacity-50;
+}
+
+.btn-primary {
+  background-color: var(--accent);
+  color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.btn-primary:active:not(:disabled) {
+  filter: brightness(0.95);
+}
+
+.btn-secondary {
+  background-color: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: var(--surface-3);
+}
+
+/* 模态框样式 */
+.modal-overlay {
+  @apply fixed inset-0 flex items-center justify-center z-50;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  @apply rounded-2xl p-6 w-[480px] max-h-[90vh] overflow-y-auto shadow-2xl;
+  background-color: var(--surface-1);
+  border: 3px solid var(--border-color);
+  box-shadow:
+    4px 4px 0 var(--crayon-stroke-2, var(--border-color)),
+    8px 8px 24px rgba(0,0,0,0.2);
+}
+
+/* 悬浮效果 */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* 玻璃态效果 */
+.glass {
+  background: rgba(30, 30, 46, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(69, 71, 90, 0.3);
+}
+
+/* 动画 */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes crayonScribble {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(1px); }
+  75% { transform: translateX(-1px); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease;
+}
+
+.animate-slideUp {
+  animation: slideUp 0.3s ease;
+}
+
+.animate-pulse {
+  animation: pulse 2s infinite;
+}
+
+/* 状态指示器 */
+.status-indicator {
+  @apply w-2 h-2 rounded-full;
+}
+
+.status-connected {
+  background-color: var(--accent-green);
+  box-shadow: 0 0 6px var(--accent-green);
+}
+
+.status-connecting {
+  background-color: var(--accent-yellow);
+  animation: pulse 1s infinite;
+}
+
+.status-error {
+  background-color: var(--accent-red);
+}
+
+.status-disconnected {
+  background-color: var(--text-muted);
+}
+
+/* 分隔线 - 蜡笔风格 */
+.divider {
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--border-color),
+    transparent
+  );
+  opacity: 0.6;
+  border-radius: 1px;
+}
+
+/* xterm.js 终端样式 */
+.xterm {
+  height: 100%;
+  padding: 0;
+}
+
+.xterm-helper-textarea {
+  position: absolute !important;
+  opacity: 0;
+  left: -9999px;
+}
+
+.xterm-viewport {
+  overflow-y: auto !important;
+}
+
+.xterm-screen {
+  height: 100%;
+}
+
+.xterm-rows {
+  padding: 0 4px;
+}
+
+/* 终端选中样式增强 - 高对比度 */
+.xterm .xterm-selection div,
+.xterm-screen .xterm-selection div,
+.xterm-selection div {
+  background-color: rgba(80, 140, 255, 0.45) !important;
+}
+
+/* 选中文字样式 */
+.xterm .xterm-selection,
+.xterm-screen .xterm-selection {
+  background-color: rgba(80, 140, 255, 0.45) !important;
+}
+
+/* 全局背景模式下终端选中样式 - 更高对比度 */
+html[data-custom-bg="app"] .xterm .xterm-selection div,
+html[data-custom-bg="app"] .xterm-selection div,
+html[data-custom-bg="both"] .xterm .xterm-selection div,
+html[data-custom-bg="both"] .xterm-selection div {
+  background-color: rgba(100, 160, 255, 0.55) !important;
+}
+
+/* 全局选中样式 - 输入框等 */
+::selection {
+  background-color: rgba(80, 140, 255, 0.4);
+  color: inherit;
+}
+
+::-moz-selection {
+  background-color: rgba(80, 140, 255, 0.4);
+  color: inherit;
+}
+
+.xterm-viewport::-webkit-scrollbar {
+  width: 8px;
+}
+
+.xterm-viewport::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.xterm-viewport::-webkit-scrollbar-thumb {
+  background: var(--surface-3);
+  border-radius: 4px;
+  box-shadow: inset 1px 1px 2px rgba(255,255,255,0.2);
+}
+
+.xterm-viewport::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ========================================
+   蜡笔主题特殊覆盖
+   ======================================== */
+
+/* 暖色蜡笔主题 */
+html[data-theme-style="crayon-warm"] {
+  /* 添加细微的纸张纹理感 */
+  background-image:
+    radial-gradient(ellipse at 30% 20%, rgba(255, 248, 220, 0.5) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 80%, rgba(232, 208, 160, 0.3) 0%, transparent 50%);
+}
+
+/* 暗色蜡笔主题 */
+html[data-theme-style="crayon-dark"] {
+  /* 深色画纸的质感 */
+  background-image:
+    radial-gradient(ellipse at 30% 20%, rgba(48, 40, 64, 0.5) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 80%, rgba(24, 20, 32, 0.3) 0%, transparent 50%);
+}
+
+html[data-theme-style="crayon-dark"] .modal-content {
+  box-shadow:
+    0 4px 24px rgba(0,0,0,0.4);
+}
+
+/* SVG 滤镜用于蜡笔质感（需要在 HTML 中定义） */
+@supports (filter: url(#crayon-texture)) {
+  .crayon-textured {
+    filter: url(#crayon-texture);
+  }
+}
+
+/* Range 滑块样式 */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-track {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--surface-3);
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  margin-top: -6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+}
+
+input[type="range"]::-moz-range-track {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--surface-3);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s ease;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+  transform: scale(1.1);
+}
+
+/* 数字输入框样式 */
+input[type="number"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+
+/* ========================================
+   自定义背景图片样式
+   ======================================== */
+
+/* 自定义背景时，让 body 背景透明 */
+html[data-custom-bg="app"] body,
+html[data-custom-bg="both"] body {
+  background-color: transparent !important;
+}
+
+/* 全局背景时，给面板添加半透明背景，保持可读性 */
+html[data-custom-bg="app"] .bg-surface-0,
+html[data-custom-bg="both"] .bg-surface-0 {
+  background-color: transparent !important;
+}
+
+html[data-custom-bg="app"] .bg-surface-1,
+html[data-custom-bg="both"] .bg-surface-1 {
+  background-color: rgba(0, 0, 0, 0.4) !important;
+  backdrop-filter: blur(4px);
+}
+
+html[data-custom-bg="app"] .bg-surface-2,
+html[data-custom-bg="both"] .bg-surface-2 {
+  background-color: rgba(0, 0, 0, 0.3) !important;
+}
+
+html[data-custom-bg="app"] .bg-surface-3,
+html[data-custom-bg="both"] .bg-surface-3 {
+  background-color: rgba(0, 0, 0, 0.2) !important;
+}
+
+/* 全局背景时，文字颜色调整为浅色以确保可读性 */
+html[data-custom-bg="app"] .text-text-primary,
+html[data-custom-bg="app"] .text-text-secondary,
+html[data-custom-bg="app"] .text-text-muted,
+html[data-custom-bg="both"] .text-text-primary,
+html[data-custom-bg="both"] .text-text-secondary,
+html[data-custom-bg="both"] .text-text-muted {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+html[data-custom-bg="app"] .text-text-muted,
+html[data-custom-bg="both"] .text-text-muted {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+/* 输入框背景和文字 */
+html[data-custom-bg="app"] .input-field,
+html[data-custom-bg="both"] .input-field {
+  background-color: rgba(0, 0, 0, 0.5) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+html[data-custom-bg="app"] .input-field::placeholder,
+html[data-custom-bg="both"] .input-field::placeholder {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+html[data-custom-bg="app"] .input-field:focus,
+html[data-custom-bg="both"] .input-field:focus {
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1) !important;
+}
+
+/* 下拉选择框 */
+html[data-custom-bg="app"] select.input-field,
+html[data-custom-bg="both"] select.input-field {
+  background-color: rgba(0, 0, 0, 0.5) !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+html[data-custom-bg="app"] select.input-field option,
+html[data-custom-bg="both"] select.input-field option {
+  background-color: #2a2a35;
+  color: #fff;
+}
+
+/* 按钮样式 */
+html[data-custom-bg="app"] .sidebar-item,
+html[data-custom-bg="both"] .sidebar-item {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+html[data-custom-bg="app"] .sidebar-item:hover,
+html[data-custom-bg="both"] .sidebar-item:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+/* 右键菜单和弹出层 */
+html[data-custom-bg="app"] .modal-content,
+html[data-custom-bg="both"] .modal-content {
+  background-color: rgba(30, 30, 40, 0.95) !important;
+  backdrop-filter: blur(8px);
+}
+
+html[data-custom-bg="app"] .fixed.bg-surface-1,
+html[data-custom-bg="both"] .fixed.bg-surface-1 {
+  background-color: rgba(30, 30, 40, 0.95) !important;
+  backdrop-filter: blur(8px);
+}
+
+/* 自定义背景层 - 应用到整个应用 */
+html[data-custom-bg="app"] body::after,
+html[data-custom-bg="both"] body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: var(--custom-bg-image);
+  background-size: var(--custom-bg-fit, cover);
+  background-position: var(--custom-bg-position, center center);
+  background-repeat: var(--custom-bg-repeat, no-repeat);
+  opacity: var(--custom-bg-opacity, 0.3);
+  filter: blur(var(--custom-bg-blur, 0px));
+  pointer-events: none;
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+/* 有自定义背景时，隐藏蜡笔纹理层 */
+html[data-custom-bg="app"] body::before,
+html[data-custom-bg="both"] body::before {
+  display: none !important;
+}
+
+/* 当启用自定义背景时，保持终端透明以显示背景 */
+html[data-custom-bg="terminal"] .terminal-bg,
+html[data-custom-bg="both"] .terminal-bg {
+  position: relative;
+}
+
+html[data-custom-bg="terminal"] .terminal-bg::before,
+html[data-custom-bg="both"] .terminal-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image: var(--custom-bg-image);
+  background-size: var(--custom-bg-fit, cover);
+  background-position: var(--custom-bg-position, center center);
+  background-repeat: var(--custom-bg-repeat, no-repeat);
+  opacity: var(--custom-bg-opacity, 0.3);
+  filter: blur(var(--custom-bg-blur, 0px));
+  pointer-events: none;
+}
+
+/* 终端透明背景 - 全局背景和终端背景模式都需要 */
+html[data-custom-bg="app"] .xterm-screen,
+html[data-custom-bg="terminal"] .xterm-screen,
+html[data-custom-bg="both"] .xterm-screen,
+html[data-custom-bg="app"] .xterm-viewport,
+html[data-custom-bg="terminal"] .xterm-viewport,
+html[data-custom-bg="both"] .xterm-viewport {
+  background-color: transparent !important;
+}
+
+/* 确保应用内容正常显示 */
+
+/* 背景设置面板中的图片预览 */
+.bg-preview-container {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.bg-preview-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
