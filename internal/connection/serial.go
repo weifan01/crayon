@@ -11,30 +11,30 @@ import (
 
 // SerialConnection Serial 连接实现
 type SerialConnection struct {
-	id          string
-	port        string
-	baudRate    int
-	dataBits    int
-	stopBits    int
- parity     string
-	status      ConnectionStatus
-	portHandle  serial.Port
-	output      io.Reader
-	input       io.Writer
-	mu          sync.Mutex
-	cols        int
-	rows        int
-	done        chan struct{}
+	id         string
+	port       string
+	baudRate   int
+	dataBits   int
+	stopBits   int
+	parity     string
+	status     ConnectionStatus
+	portHandle serial.Port
+	output     io.Reader
+	input      io.Writer
+	mu         sync.Mutex
+	cols       int
+	rows       int
+	done       chan struct{}
 }
 
 // SerialConfig Serial 配置
 type SerialConfig struct {
 	ID       string
-	Port     string     // 串口路径，如 /dev/ttyUSB0, COM1
-	BaudRate int        // 波特率，默认 9600
-	DataBits int        // 数据位，默认 8
-	StopBits int        // 停止位，默认 1
-	Parity   string     // 校验位，none/even/odd，默认 none
+	Port     string // 串口路径，如 /dev/ttyUSB0, COM1
+	BaudRate int    // 波特率，默认 9600
+	DataBits int    // 数据位，默认 8
+	StopBits int    // 停止位，默认 1
+	Parity   string // 校验位，none/even/odd，默认 none
 	Cols     int
 	Rows     int
 }
@@ -98,7 +98,7 @@ func (c *SerialConnection) Connect() error {
 	c.setStatus(StatusConnecting)
 
 	// 获取校验位设置
- parityMode := serial.NoParity
+	parityMode := serial.NoParity
 	switch c.parity {
 	case "even":
 		parityMode = serial.EvenParity

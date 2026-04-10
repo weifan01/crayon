@@ -285,7 +285,14 @@ const zh: Record<string, string> = {
   'quickConnect.errHostRequired': '请输入主机地址',
   'quickConnect.errUserRequired': '请输入用户名',
   'quickConnect.errPasswordRequired': '请输入密码',
+  'quickConnect.errLocalShellRequired': '请输入Shell类型',
   'quickConnect.groupName': '快速连接',
+  'quickConnect.localGroup': '本地会话',
+  'quickConnect.local': '本地Shell',
+  'quickConnect.localShell': 'Shell类型 *',
+  'quickConnect.selectShell': '选择Shell...',
+  'quickConnect.workingDir': '工作目录',
+  'quickConnect.workingDirPlaceholder': '例如：/home/user 或 C:\\Users\\username',
 
   // 命令库
   'command.title': '命令库',
@@ -332,7 +339,7 @@ const zh: Record<string, string> = {
 
   // 欢迎页
   'welcome.title': 'Crayon',
-  'welcome.tip': '点击左侧「快速连接」开始使用',
+  'welcome.clickToConnect': '点击此处快速创建会话',
 
   // 日志
   'logs.title': '会话日志',
@@ -624,7 +631,14 @@ const en: Record<string, string> = {
   'quickConnect.errHostRequired': 'Please enter host address',
   'quickConnect.errUserRequired': 'Please enter username',
   'quickConnect.errPasswordRequired': 'Please enter password',
+  'quickConnect.errLocalShellRequired': 'Please enter shell type',
   'quickConnect.groupName': 'Quick Connect',
+  'quickConnect.localGroup': 'Local Sessions',
+  'quickConnect.local': 'Local Shell',
+  'quickConnect.localShell': 'Shell Type *',
+  'quickConnect.selectShell': 'Select Shell...',
+  'quickConnect.workingDir': 'Working Directory',
+  'quickConnect.workingDirPlaceholder': 'e.g., /home/user or C:\\Users\\username',
 
   // Command library
   'command.title': 'Command Library',
@@ -671,7 +685,7 @@ const en: Record<string, string> = {
 
   // Welcome
   'welcome.title': 'Crayon Terminal',
-  'welcome.tip': 'Click "Quick Connect" on the left to get started',
+  'welcome.clickToConnect': 'Click here to quickly create a session',
 
   // Logs
   'logs.title': 'Session Logs',

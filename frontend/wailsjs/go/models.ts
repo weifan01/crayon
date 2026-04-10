@@ -385,6 +385,7 @@ export namespace session {
 	    stopBits: number;
 	    parity: string;
 	    noNegotiation: boolean;
+	    localEnv: string[];
 	    loginScript: string[];
 	    createdAt: FlexibleTime;
 	    updatedAt: FlexibleTime;
@@ -421,6 +422,7 @@ export namespace session {
 	        this.stopBits = source["stopBits"];
 	        this.parity = source["parity"];
 	        this.noNegotiation = source["noNegotiation"];
+	        this.localEnv = source["localEnv"];
 	        this.loginScript = source["loginScript"];
 	        this.createdAt = this.convertValues(source["createdAt"], FlexibleTime);
 	        this.updatedAt = this.convertValues(source["updatedAt"], FlexibleTime);

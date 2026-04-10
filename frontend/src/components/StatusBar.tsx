@@ -108,7 +108,7 @@ export function StatusBar() {
       {/* 右侧：当前时间和版本 */}
       <div className="ml-auto flex items-center gap-4">
         <span className="text-text-secondary font-mono">{formatTime(currentTime)}</span>
-        <span className="text-text-muted">{APP_NAME} v{APP_VERSION}</span>
+        <span className="text-text-muted">{APP_NAME} {APP_VERSION}</span>
       </div>
     </div>
   )

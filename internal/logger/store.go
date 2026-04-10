@@ -11,13 +11,13 @@ import (
 
 // Store 日志存储
 type Store struct {
-	logDir       string
-	activeLogs   map[string]*SessionLog
-	mu           sync.RWMutex
-	enabled      bool
-	saveTicker   *time.Ticker
-	stopChan     chan struct{}
-	wg           sync.WaitGroup
+	logDir     string
+	activeLogs map[string]*SessionLog
+	mu         sync.RWMutex
+	enabled    bool
+	saveTicker *time.Ticker
+	stopChan   chan struct{}
+	wg         sync.WaitGroup
 }
 
 // NewStore 创建日志存储

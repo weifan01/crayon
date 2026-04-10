@@ -21,7 +21,7 @@ func main() {
 
 	// 创建 Wails 应用
 	err := wails.Run(&options.App{
-		Title:     version.AppName + " v" + version.Version,
+		Title:     version.AppName + " " + version.Version,
 		Width:     1024,
 		Height:    768,
 		Frameless: false, // 使用系统原生标题栏

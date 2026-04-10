@@ -14,6 +14,7 @@ const (
 	ProtocolSSH    Protocol = "ssh"
 	ProtocolTelnet Protocol = "telnet"
 	ProtocolSerial Protocol = "serial"
+	ProtocolLocal  Protocol = "local"
 )
 
 // AuthType 认证类型
@@ -67,37 +68,39 @@ func (ft FlexibleTime) IsZero() bool {
 
 // Session 会话配置
 type Session struct {
-	ID            string        `json:"id"`
-	Name          string        `json:"name"`
-	Group         string        `json:"group"`
-	Description   string        `json:"description"`
-	Protocol      Protocol      `json:"protocol"`
-	Host          string        `json:"host"`
-	Port          int           `json:"port"`
-	User          string        `json:"user"`
-	AuthType      AuthType      `json:"authType"`
-	Password      string        `json:"password"`
-	KeyPath       string        `json:"keyPath"`
-	KeyPassphrase string        `json:"keyPassphrase"`
-	KeepAlive     int           `json:"keepAlive"`
-	ProxyJump     string        `json:"proxyJump"`
-	ProxyCommand  string        `json:"proxyCommand"`
-	TerminalType  string        `json:"terminalType"`
-	FontSize      int           `json:"fontSize"`
-	FontFamily    string        `json:"fontFamily"`
-	ThemeID       string        `json:"themeId"`
-	Encoding      string        `json:"encoding"`
+	ID            string   `json:"id"`
+	Name          string   `json:"name"`
+	Group         string   `json:"group"`
+	Description   string   `json:"description"`
+	Protocol      Protocol `json:"protocol"`
+	Host          string   `json:"host"`
+	Port          int      `json:"port"`
+	User          string   `json:"user"`
+	AuthType      AuthType `json:"authType"`
+	Password      string   `json:"password"`
+	KeyPath       string   `json:"keyPath"`
+	KeyPassphrase string   `json:"keyPassphrase"`
+	KeepAlive     int      `json:"keepAlive"`
+	ProxyJump     string   `json:"proxyJump"`
+	ProxyCommand  string   `json:"proxyCommand"`
+	TerminalType  string   `json:"terminalType"`
+	FontSize      int      `json:"fontSize"`
+	FontFamily    string   `json:"fontFamily"`
+	ThemeID       string   `json:"themeId"`
+	Encoding      string   `json:"encoding"`
 	// Serial 协议专用字段
-	DataBits      int           `json:"dataBits"`
-	StopBits      int           `json:"stopBits"`
-	Parity        string        `json:"parity"`
+	DataBits int    `json:"dataBits"`
+	StopBits int    `json:"stopBits"`
+	Parity   string `json:"parity"`
 	// Telnet 协议专用字段
-	NoNegotiation bool          `json:"noNegotiation"` // 禁用 Telnet 协商（用于连接非 Telnet 服务器）
-	LoginScript   []string      `json:"loginScript"`
-	CreatedAt     FlexibleTime  `json:"createdAt"`
-	UpdatedAt     FlexibleTime  `json:"updatedAt"`
-	LastUsedAt    FlexibleTime  `json:"lastUsedAt"`
-	Tags          []string      `json:"tags"`
+	NoNegotiation bool `json:"noNegotiation"` // 禁用 Telnet 协商（用于连接非 Telnet 服务器）
+	// Local 协议专用字段
+	LocalEnv    []string     `json:"localEnv"` // 本地 Shell 的环境变量
+	LoginScript []string     `json:"loginScript"`
+	CreatedAt   FlexibleTime `json:"createdAt"`
+	UpdatedAt   FlexibleTime `json:"updatedAt"`
+	LastUsedAt  FlexibleTime `json:"lastUsedAt"`
+	Tags        []string     `json:"tags"`
 }
 
 // Group 会话分组
@@ -148,6 +151,8 @@ func defaultPort(protocol Protocol) int {
 		return 22
 	case ProtocolTelnet:
 		return 23
+	case ProtocolLocal:
+		return 0 // Local 协议不需要端口
 	default:
 		return 0
 	}

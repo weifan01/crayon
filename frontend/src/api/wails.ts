@@ -30,7 +30,7 @@ export interface Session {
   name: string
   group: string
   description: string
-  protocol: 'ssh' | 'telnet' | 'serial'
+  protocol: 'ssh' | 'telnet' | 'serial' | 'local'
   host: string
   port: number
   user: string
@@ -50,6 +50,7 @@ export interface Session {
   stopBits: number
   parity: string
   noNegotiation: boolean // Telnet: 禁用协议协商
+  localEnv: string[]      // Local: 本地Shell的环境变量
   loginScript: string[]
   tags: string[]
   createdAt: string

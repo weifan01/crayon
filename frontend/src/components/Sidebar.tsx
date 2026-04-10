@@ -674,9 +674,9 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
             </button>
           </div>
         )}
+        <button onClick={() => setShowQuickConnect(true)} className="sidebar-item text-sm"><Zap size={16} /><span>{t('sidebar.quickConnect')}</span></button>
         <button onClick={handleNew} className="sidebar-item text-sm"><Plus size={16} /><span>{t('sidebar.newSession')}</span></button>
         <button onClick={() => setShowGroups(true)} className="sidebar-item text-sm"><FolderPlus size={16} /><span>{t('sidebar.groupManage')}</span></button>
-        <button onClick={() => setShowQuickConnect(true)} className="sidebar-item text-sm"><Zap size={16} /><span>{t('sidebar.quickConnect')}</span></button>
         <button onClick={() => setShowCommands(true)} className="sidebar-item text-sm"><Terminal size={16} /><span>{t('sidebar.commandLibrary')}</span></button>
         <button onClick={onOpenSettings} className="sidebar-item text-sm"><Settings size={16} /><span>{t('sidebar.settings')}</span></button>
       </div>
@@ -689,7 +689,7 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
             {err && <div className="mb-4 p-3 bg-red-900/30 border border-red-700/50 rounded-lg text-red-400 text-sm">{err}</div>}
             <div className="space-y-4">
               <div><label className="block text-sm text-text-secondary mb-1">{t('common.name')} *</label><input value={edit.name || ''} onChange={e => setEdit({ ...edit, name: e.target.value })} className="input-field" autoFocus /></div>
-              <div><label className="block text-sm text-text-secondary mb-1">{t('common.protocol')}</label><select value={edit.protocol || 'ssh'} onChange={e => setEdit({ ...edit, protocol: e.target.value as Session['protocol'] })} className="input-field"><option value="ssh">SSH</option><option value="telnet">Telnet</option><option value="serial">Serial</option></select></div>
+              <div><label className="block text-sm text-text-secondary mb-1">{t('common.protocol')}</label><select value={edit.protocol || 'ssh'} onChange={e => setEdit({ ...edit, protocol: e.target.value as Session['protocol'] })} className="input-field"><option value="ssh">SSH</option><option value="telnet">Telnet</option><option value="serial">Serial</option><option value="local">{t('quickConnect.local')}</option></select></div>
               {edit.protocol === 'serial' ? (
                 <>
                   <div><label className="block text-sm text-text-secondary mb-1">{t('session.serialPath')} *</label><input value={edit.host || ''} onChange={e => setEdit({ ...edit, host: e.target.value })} placeholder="/dev/ttyUSB0 / COM1" className="input-field" /></div>

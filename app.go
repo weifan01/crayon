@@ -536,6 +536,8 @@ func (a *App) ConnectTab(tabId string, sessionId string, cols, rows int) error {
 		return a.connectTelnet(tabId, sess, cols, rows)
 	case session.ProtocolSerial:
 		return a.connectSerial(tabId, sess, cols, rows)
+	case session.ProtocolLocal:
+		return a.connectLocalShell(tabId, sess, cols, rows)
 	default:
 		return fmt.Errorf("unsupported protocol: %s", sess.Protocol)
 	}
@@ -671,6 +673,37 @@ func (a *App) connectSerial(tabId string, sess *session.Session, cols, rows int)
 	}
 
 	a.sessionStore.UpdateLastUsed(sess.ID)
+	a.outputLoops.Store(tabId, true)
+	go a.readOutputLoop(tabId, conn)
+
+	return nil
+}
+
+// connectLocalShell 建立本地 Shell 连接
+func (a *App) connectLocalShell(tabId string, sess *session.Session, cols, rows int) error {
+	conn := connection.NewLocalShellConnection(connection.LocalShellConfig{
+		ID:         tabId,
+		Shell:      sess.Host,     // Shell 类型或路径 (例如 "bash", "/bin/zsh", "cmd", "powershell")
+		Cols:       cols,          // 初始列数
+		Rows:       rows,          // 初始行数
+		WorkingDir: sess.User,     // 工作目录存储在 User 字段中
+		Env:        sess.LocalEnv, // 使用 LocalEnv 存储环境变量
+	})
+
+	if err := conn.Connect(); err != nil {
+		return err
+	}
+
+	// 添加到管理器
+	if err := a.connManager.Add(conn); err != nil {
+		conn.Disconnect()
+		return err
+	}
+
+	// 更新最后使用时间
+	a.sessionStore.UpdateLastUsed(sess.ID)
+
+	// 启动输出读取循环
 	a.outputLoops.Store(tabId, true)
 	go a.readOutputLoop(tabId, conn)
 
@@ -853,33 +886,33 @@ type ExportConfig struct {
 
 // ExportedSession 导出的会话数据
 type ExportedSession struct {
-	ID           string            `json:"id"`
-	Name         string            `json:"name"`
-	Group        string            `json:"group"`
-	Description  string            `json:"description"`
-	Protocol     string            `json:"protocol"`
-	Host         string            `json:"host"`
-	Port         int               `json:"port"`
-	User         string            `json:"user"`
-	AuthType     string            `json:"authType"`
-	Password     *string           `json:"password,omitempty"`      // 可选，仅当 includeSensitive=true
-	KeyPath      string            `json:"keyPath,omitempty"`
-	KeyPassphrase *string          `json:"keyPassphrase,omitempty"` // 可选，仅当 includeSensitive=true
-	KeepAlive    int               `json:"keepAlive"`
-	ProxyJump    string            `json:"proxyJump"`
-	ProxyCommand string            `json:"proxyCommand"`
-	TerminalType string            `json:"terminalType"`
-	FontSize     int               `json:"fontSize"`
-	FontFamily   string            `json:"fontFamily"`
-	ThemeID      string            `json:"themeId"`
-	Encoding     string            `json:"encoding"`
-	DataBits     int               `json:"dataBits"`
-	StopBits     int               `json:"stopBits"`
-	Parity       string            `json:"parity"`
-	LoginScript  []string          `json:"loginScript"`
-	Tags         []string          `json:"tags"`
-	CreatedAt    string            `json:"createdAt"`
-	UpdatedAt    string            `json:"updatedAt"`
+	ID            string   `json:"id"`
+	Name          string   `json:"name"`
+	Group         string   `json:"group"`
+	Description   string   `json:"description"`
+	Protocol      string   `json:"protocol"`
+	Host          string   `json:"host"`
+	Port          int      `json:"port"`
+	User          string   `json:"user"`
+	AuthType      string   `json:"authType"`
+	Password      *string  `json:"password,omitempty"` // 可选，仅当 includeSensitive=true
+	KeyPath       string   `json:"keyPath,omitempty"`
+	KeyPassphrase *string  `json:"keyPassphrase,omitempty"` // 可选，仅当 includeSensitive=true
+	KeepAlive     int      `json:"keepAlive"`
+	ProxyJump     string   `json:"proxyJump"`
+	ProxyCommand  string   `json:"proxyCommand"`
+	TerminalType  string   `json:"terminalType"`
+	FontSize      int      `json:"fontSize"`
+	FontFamily    string   `json:"fontFamily"`
+	ThemeID       string   `json:"themeId"`
+	Encoding      string   `json:"encoding"`
+	DataBits      int      `json:"dataBits"`
+	StopBits      int      `json:"stopBits"`
+	Parity        string   `json:"parity"`
+	LoginScript   []string `json:"loginScript"`
+	Tags          []string `json:"tags"`
+	CreatedAt     string   `json:"createdAt"`
+	UpdatedAt     string   `json:"updatedAt"`
 }
 
 // ImportPreview 导入预览结果
@@ -912,10 +945,10 @@ type ImportCommandPreview struct {
 
 // ImportOptions 导入选项
 type ImportOptions struct {
-	SessionMode    string            `json:"sessionMode"`    // "skip", "overwrite", "rename"
-	CommandMode    string            `json:"commandMode"`    // "skip", "overwrite", "rename"
-	SelectedIDs    []string          `json:"selectedIds"`    // 选择性导入的 ID 列表，空表示全部
-	SessionNewIDs  map[string]string `json:"sessionNewIds"`  // 会话重命名映射（原ID -> 新ID）
+	SessionMode   string            `json:"sessionMode"`   // "skip", "overwrite", "rename"
+	CommandMode   string            `json:"commandMode"`   // "skip", "overwrite", "rename"
+	SelectedIDs   []string          `json:"selectedIds"`   // 选择性导入的 ID 列表，空表示全部
+	SessionNewIDs map[string]string `json:"sessionNewIds"` // 会话重命名映射（原ID -> 新ID）
 }
 
 // ExportConfig 导出配置

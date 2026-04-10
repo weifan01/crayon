@@ -97,6 +97,9 @@ func (s *Store) initTables() error {
 	s.addColumnIfNotExists("sessions", "stop_bits", "INTEGER DEFAULT 1")
 	s.addColumnIfNotExists("sessions", "parity", "TEXT DEFAULT 'none'")
 
+	// 添加 Local 协议专用列（如果不存在）
+	s.addColumnIfNotExists("sessions", "local_env", "TEXT DEFAULT '[]'")
+
 	return nil
 }
 
@@ -155,6 +158,7 @@ func (s *Store) CreateSession(session *Session) error {
 
 	loginScriptJSON, _ := json.Marshal(session.LoginScript)
 	tagsJSON, _ := json.Marshal(session.Tags)
+	localEnvJSON, _ := json.Marshal(session.LocalEnv)
 
 	createdAtStr := ""
 	if !session.CreatedAt.IsZero() {
@@ -170,8 +174,8 @@ func (s *Store) CreateSession(session *Session) error {
 			id, name, group_path, description, protocol, host, port, user,
 			auth_type, password, key_path, key_passphrase, keep_alive,
 			proxy_jump, proxy_command, terminal_type, font_size, font_family,
-			theme_id, encoding, login_script, tags, created_at, updated_at, last_used_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			theme_id, encoding, login_script, tags, created_at, updated_at, last_used_at, local_env
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`,
 		session.ID, session.Name, session.Group, session.Description,
 		string(session.Protocol), session.Host, session.Port, session.User,
@@ -179,7 +183,7 @@ func (s *Store) CreateSession(session *Session) error {
 		session.KeepAlive, session.ProxyJump, session.ProxyCommand,
 		session.TerminalType, session.FontSize, session.FontFamily,
 		session.ThemeID, session.Encoding, string(loginScriptJSON), string(tagsJSON),
-		createdAtStr, updatedAtStr, "",
+		createdAtStr, updatedAtStr, "", string(localEnvJSON),
 	)
 	return err
 }
@@ -190,12 +194,12 @@ func (s *Store) GetSession(id string) (*Session, error) {
 		SELECT id, name, group_path, description, protocol, host, port, user,
 			auth_type, password, key_path, key_passphrase, keep_alive,
 			proxy_jump, proxy_command, terminal_type, font_size, font_family,
-			theme_id, encoding, login_script, tags, created_at, updated_at, last_used_at
+			theme_id, encoding, login_script, tags, created_at, updated_at, last_used_at, local_env
 		FROM sessions WHERE id = ?
 	`, id)
 
 	session := &Session{}
-	var loginScriptJSON, tagsJSON string
+	var loginScriptJSON, tagsJSON, localEnvJSON string
 	var createdAt, updatedAt, lastUsedAt sql.NullString
 
 	err := row.Scan(
@@ -205,7 +209,7 @@ func (s *Store) GetSession(id string) (*Session, error) {
 		&session.KeepAlive, &session.ProxyJump, &session.ProxyCommand,
 		&session.TerminalType, &session.FontSize, &session.FontFamily,
 		&session.ThemeID, &session.Encoding, &loginScriptJSON, &tagsJSON,
-		&createdAt, &updatedAt, &lastUsedAt,
+		&createdAt, &updatedAt, &lastUsedAt, &localEnvJSON,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -229,6 +233,7 @@ func (s *Store) GetSession(id string) (*Session, error) {
 
 	json.Unmarshal([]byte(loginScriptJSON), &session.LoginScript)
 	json.Unmarshal([]byte(tagsJSON), &session.Tags)
+	json.Unmarshal([]byte(localEnvJSON), &session.LocalEnv)
 
 	return session, nil
 }
@@ -239,7 +244,7 @@ func (s *Store) ListSessions() ([]*Session, error) {
 		SELECT id, name, group_path, description, protocol, host, port, user,
 			auth_type, password, key_path, key_passphrase, keep_alive,
 			proxy_jump, proxy_command, terminal_type, font_size, font_family,
-			theme_id, encoding, login_script, tags, created_at, updated_at, last_used_at
+			theme_id, encoding, login_script, tags, created_at, updated_at, last_used_at, local_env
 		FROM sessions ORDER BY name
 	`)
 	if err != nil {
@@ -256,7 +261,7 @@ func (s *Store) ListSessionsByGroup(group string) ([]*Session, error) {
 		SELECT id, name, group_path, description, protocol, host, port, user,
 			auth_type, password, key_path, key_passphrase, keep_alive,
 			proxy_jump, proxy_command, terminal_type, font_size, font_family,
-			theme_id, encoding, login_script, tags, created_at, updated_at, last_used_at
+			theme_id, encoding, login_script, tags, created_at, updated_at, last_used_at, local_env
 		FROM sessions WHERE group_path = ? ORDER BY name
 	`, group)
 	if err != nil {
@@ -273,7 +278,7 @@ func (s *Store) SearchSessions(keyword string) ([]*Session, error) {
 		SELECT id, name, group_path, description, protocol, host, port, user,
 			auth_type, password, key_path, key_passphrase, keep_alive,
 			proxy_jump, proxy_command, terminal_type, font_size, font_family,
-			theme_id, encoding, login_script, tags, created_at, updated_at, last_used_at
+			theme_id, encoding, login_script, tags, created_at, updated_at, last_used_at, local_env
 		FROM sessions WHERE name LIKE ? OR host LIKE ? OR description LIKE ?
 		ORDER BY name
 	`,
@@ -292,7 +297,7 @@ func (s *Store) scanSessions(rows *sql.Rows) ([]*Session, error) {
 	var sessions []*Session
 	for rows.Next() {
 		session := &Session{}
-		var loginScriptJSON, tagsJSON string
+		var loginScriptJSON, tagsJSON, localEnvJSON string
 		var createdAt, updatedAt, lastUsedAt sql.NullString
 
 		err := rows.Scan(
@@ -302,7 +307,7 @@ func (s *Store) scanSessions(rows *sql.Rows) ([]*Session, error) {
 			&session.KeepAlive, &session.ProxyJump, &session.ProxyCommand,
 			&session.TerminalType, &session.FontSize, &session.FontFamily,
 			&session.ThemeID, &session.Encoding, &loginScriptJSON, &tagsJSON,
-			&createdAt, &updatedAt, &lastUsedAt,
+			&createdAt, &updatedAt, &lastUsedAt, &localEnvJSON,
 		)
 		if err != nil {
 			return nil, err
@@ -323,6 +328,7 @@ func (s *Store) scanSessions(rows *sql.Rows) ([]*Session, error) {
 
 		json.Unmarshal([]byte(loginScriptJSON), &session.LoginScript)
 		json.Unmarshal([]byte(tagsJSON), &session.Tags)
+		json.Unmarshal([]byte(localEnvJSON), &session.LocalEnv)
 
 		sessions = append(sessions, session)
 	}
@@ -334,6 +340,7 @@ func (s *Store) UpdateSession(session *Session) error {
 	session.UpdatedAt = FlexibleTime{Time: time.Now()}
 	loginScriptJSON, _ := json.Marshal(session.LoginScript)
 	tagsJSON, _ := json.Marshal(session.Tags)
+	localEnvJSON, _ := json.Marshal(session.LocalEnv)
 
 	_, err := s.db.Exec(`
 		UPDATE sessions SET
@@ -341,7 +348,7 @@ func (s *Store) UpdateSession(session *Session) error {
 			auth_type = ?, password = ?, key_path = ?, key_passphrase = ?, keep_alive = ?,
 			proxy_jump = ?, proxy_command = ?, terminal_type = ?, font_size = ?,
 			font_family = ?, theme_id = ?, encoding = ?, login_script = ?, tags = ?,
-			updated_at = ?
+			local_env = ?, updated_at = ?
 		WHERE id = ?
 	`,
 		session.Name, session.Group, session.Description,
@@ -350,7 +357,7 @@ func (s *Store) UpdateSession(session *Session) error {
 		session.KeepAlive, session.ProxyJump, session.ProxyCommand,
 		session.TerminalType, session.FontSize, session.FontFamily,
 		session.ThemeID, session.Encoding, string(loginScriptJSON), string(tagsJSON),
-		session.UpdatedAt.Format(time.RFC3339), session.ID,
+		string(localEnvJSON), session.UpdatedAt.Format(time.RFC3339), session.ID,
 	)
 	return err
 }

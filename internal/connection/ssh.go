@@ -80,6 +80,7 @@ const (
 	ConnectionSSH    ConnectionType = "ssh"
 	ConnectionTelnet ConnectionType = "telnet"
 	ConnectionSerial ConnectionType = "serial"
+	ConnectionLocal  ConnectionType = "local"
 )
 
 // ConnectionStatus 连接状态
@@ -315,7 +316,7 @@ func (c *SSHConnection) Connect() error {
 		ssh.INLCR:         0,     // 不转换 NL 到 CR
 		ssh.IGNCR:         0,     // 不忽略 CR
 		ssh.IXON:          0,     // 禁用 XON/XOFF 流控制
-			ssh.IXOFF:         0,     // 禁用输出控制
+		ssh.IXOFF:         0,     // 禁用输出控制
 		ssh.TTY_OP_ISPEED: 38400, // 输入速度
 		ssh.TTY_OP_OSPEED: 38400, // 输出速度
 	}

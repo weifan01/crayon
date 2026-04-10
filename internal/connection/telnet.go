@@ -21,32 +21,32 @@ const (
 	SE   = 0xF0 // Subnegotiation End
 
 	// Telnet 选项
-	OPT_ECHO            = 1
+	OPT_ECHO              = 1
 	OPT_SUPPRESS_GO_AHEAD = 3
-	OPT_STATUS          = 5
-	OPT_TIMING_MARK     = 6
-	OPT_TERMINAL_TYPE   = 24
-	OPT_WINDOW_SIZE     = 31 // NAWS
-	OPT_TERMINAL_SPEED  = 32
-	OPT_REMOTE_FLOW     = 33
-	OPT_LINEMODE        = 34
-	OPT_ENV             = 36
-	OPT_NEW_ENV         = 39
+	OPT_STATUS            = 5
+	OPT_TIMING_MARK       = 6
+	OPT_TERMINAL_TYPE     = 24
+	OPT_WINDOW_SIZE       = 31 // NAWS
+	OPT_TERMINAL_SPEED    = 32
+	OPT_REMOTE_FLOW       = 33
+	OPT_LINEMODE          = 34
+	OPT_ENV               = 36
+	OPT_NEW_ENV           = 39
 )
 
 // TelnetConnection Telnet 连接实现
 type TelnetConnection struct {
-	id       string
-	host     string
-	port     int
-	status   ConnectionStatus
-	conn     net.Conn
-	output   io.Reader
-	input    io.Writer
-	mu       sync.Mutex
-	cols     int
-	rows     int
-	done     chan struct{}
+	id     string
+	host   string
+	port   int
+	status ConnectionStatus
+	conn   net.Conn
+	output io.Reader
+	input  io.Writer
+	mu     sync.Mutex
+	cols   int
+	rows   int
+	done   chan struct{}
 
 	// 自动登录配置
 	username string
@@ -61,7 +61,7 @@ type TelnetConnection struct {
 	terminalType    string
 
 	// 回显状态变化回调
-	onEchoChange    func(needLocalEcho bool)
+	onEchoChange func(needLocalEcho bool)
 }
 
 // TelnetConfig Telnet 配置
@@ -99,21 +99,21 @@ func NewTelnetConnection(config TelnetConfig) *TelnetConnection {
 		negotiation = false
 	}
 	return &TelnetConnection{
-		id:            config.ID,
-		host:          config.Host,
-		port:          config.Port,
-		cols:          config.Cols,
-		rows:          config.Rows,
-		username:      config.Username,
-		password:      config.Password,
-		terminalType:  config.TerminalType,
-		negotiation:   negotiation,
-		status:        StatusDisconnected,
-		done:          make(chan struct{}),
-		timeout:       10 * time.Second,
+		id:           config.ID,
+		host:         config.Host,
+		port:         config.Port,
+		cols:         config.Cols,
+		rows:         config.Rows,
+		username:     config.Username,
+		password:     config.Password,
+		terminalType: config.TerminalType,
+		negotiation:  negotiation,
+		status:       StatusDisconnected,
+		done:         make(chan struct{}),
+		timeout:      10 * time.Second,
 		// 默认启用本地回显，直到服务器明确表示会回显
-		localEcho:     true,
-		serverEcho:    false,
+		localEcho:  true,
+		serverEcho: false,
 	}
 }
 

@@ -12,7 +12,7 @@ export interface AppInfo {
 }
 
 // 默认值（构建时可能使用）
-export const APP_VERSION = '1.5.0'
+export const APP_VERSION = 'dev'
 export const APP_NAME = 'Crayon'
 
 // 作者信息

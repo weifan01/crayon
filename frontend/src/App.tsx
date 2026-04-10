@@ -5,6 +5,7 @@ import { SplitPaneLayout } from './components/SplitPaneLayout'
 import { StatusBar } from './components/StatusBar'
 import { SettingsPanel } from './components/SettingsPanel'
 import { SplashScreen } from './components/SplashScreen'
+import { QuickConnect } from './components/QuickConnect'
 import { useSessionStore } from './stores/sessionStore'
 import { useTerminalStore, SplitDirection } from './stores/terminalStore'
 import { useSettingsStore } from './stores/settingsStore'
@@ -16,6 +17,7 @@ import { APP_NAME } from './version'
 function App() {
   const [showSplash, setShowSplash] = useState(true)
   const [showSettings, setShowSettings] = useState(false)
+  const [showQuickConnect, setShowQuickConnect] = useState(false)
   const { sessions } = useSessionStore()
   const { tabs, activeTabId, createTab, setActiveTab, setActivePane, getTab, splitPane, closePane } = useTerminalStore()
   const { shortcutSettings } = useSettingsStore()
@@ -23,6 +25,19 @@ function App() {
   const renderedTabsRef = useRef<Set<string>>(new Set())
 
   useEffect(() => { useSessionStore.getState().loadSessions() }, [])
+
+  // 添加快速连接键盘快捷键 (Cmd+K 或 Ctrl+K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        e.stopPropagation()
+        setShowQuickConnect(true)
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown, true)
+    return () => document.removeEventListener('keydown', handleKeyDown, true)
+  }, [])
 
   // Cmd+, (Mac) 或 Ctrl+, (Windows) 打开设置
   useEffect(() => {
@@ -252,11 +267,21 @@ function App() {
             {tabs.length === 0 ? (
               <div className="flex items-center justify-center h-full text-text-muted">
                 <div className="text-center">
-                  <div className="w-20 h-20 mx-auto mb-6 rounded-2xl flex items-center justify-center" style={{ backgroundColor: 'var(--surface-1)' }}>
-                    <Zap size={32} style={{ color: 'var(--accent)' }} />
+                  <div
+                    className="w-24 h-24 mx-auto mb-8 rounded-2xl flex items-center justify-center cursor-pointer transition-all duration-300 hover:scale-110 hover:shadow-lg"
+                    style={{ backgroundColor: 'var(--surface-2)' }}
+                    onClick={() => setShowQuickConnect(true)}
+                    title={t('welcome.clickToConnect')}
+                  >
+                    <Zap size={40} style={{ color: 'var(--accent)' }} />
                   </div>
-                  <p className="text-xl mb-2 text-text-secondary font-medium">{APP_NAME}</p>
-                  <p className="text-sm text-text-muted mb-4">{t('welcome.tip')}</p>
+                  <p className="text-2xl mb-3 text-text-secondary font-semibold">{APP_NAME}</p>
+                  <p
+                    className="text-sm text-accent cursor-pointer hover:underline transition-colors"
+                    onClick={() => setShowQuickConnect(true)}
+                  >
+                    {t('welcome.clickToConnect')}
+                  </p>
                 </div>
               </div>
             ) : (
@@ -288,6 +313,17 @@ function App() {
 
       {/* 弹窗 */}
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
+
+      {/* 快速连接对话框 */}
+      {showQuickConnect && (
+        <QuickConnect
+          onClose={() => setShowQuickConnect(false)}
+          onConnect={(id) => {
+            setShowQuickConnect(false);
+            handleQuickConnect(id);
+          }}
+        />
+      )}
     </div>
   )
 }

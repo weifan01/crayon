@@ -7,30 +7,30 @@ import (
 
 // Command 命令定义
 type Command struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Group       string    `json:"group"`        // 分组路径
-	Description string    `json:"description"`
-	Content     string    `json:"content"`      // 命令内容
-	Variables   []Variable `json:"variables"`   // 变量定义
-	Shortcut    string    `json:"shortcut"`     // 快捷键
-	CreatedAt   time.Time `json:"createdAt"`
-	UpdatedAt   time.Time `json:"updatedAt"`
+	ID          string     `json:"id"`
+	Name        string     `json:"name"`
+	Group       string     `json:"group"` // 分组路径
+	Description string     `json:"description"`
+	Content     string     `json:"content"`   // 命令内容
+	Variables   []Variable `json:"variables"` // 变量定义
+	Shortcut    string     `json:"shortcut"`  // 快捷键
+	CreatedAt   time.Time  `json:"createdAt"`
+	UpdatedAt   time.Time  `json:"updatedAt"`
 }
 
 // Variable 命令变量
 type Variable struct {
-	Name        string `json:"name"`         // 变量名，如 {service}
-	Default     string `json:"default"`      // 默认值
-	Description string `json:"description"`  // 描述
+	Name        string `json:"name"`        // 变量名，如 {service}
+	Default     string `json:"default"`     // 默认值
+	Description string `json:"description"` // 描述
 }
 
 // CommandGroup 命令分组
 type CommandGroup struct {
-	ID       string    `json:"id"`
-	Name     string    `json:"name"`
-	ParentID string    `json:"parentId"`
-	Path     string    `json:"path"`
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	ParentID  string    `json:"parentId"`
+	Path      string    `json:"path"`
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
 }
