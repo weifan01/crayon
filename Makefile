@@ -1,284 +1,142 @@
 # Crayon Terminal - Makefile
-# 多平台构建支持
 
-# 版本信息
-VERSION ?= v1.0.2
+VERSION   ?= v1.0.3
 BUILD_TIME := $(shell date +%Y-%m-%d)
 GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
-# Go 参数
-GOCMD=go
-GOFLAGS=-v
-LDFLAGS=-s -w -X "crayon/internal/version.Version=$(VERSION)" \
+LDFLAGS := -s -w \
+	-X "crayon/internal/version.Version=$(VERSION)" \
 	-X "crayon/internal/version.BuildTime=$(BUILD_TIME)" \
 	-X "crayon/internal/version.GitCommit=$(GIT_COMMIT)"
 
-# Wails 命令
-WAILS=wails
-
-# 输出目录
-BUILD_DIR=build/bin
-DIST_DIR=dist
-
-# 应用名称
-APP_NAME=crayon
-APP_DISPLAY_NAME=Crayon
-
-# macOS 相关
-MAC_APP_NAME=$(APP_DISPLAY_NAME).app
-DMG_NAME=$(APP_NAME)-$(VERSION)-darwin
+DIST_DIR     := dist
+RESOURCES_DIR := resources
+BUILD_DIR    := build
+APP_NAME     := crayon
+APP_DISPLAY_NAME := Crayon
 
 # ============================================
-# 默认目标
+# 资源准备
 # ============================================
 
-.PHONY: all
-all: dev
+.PHONY: prepare-resources
+prepare-resources:
+	@mkdir -p $(BUILD_DIR)/darwin $(BUILD_DIR)/windows
+	@cp $(RESOURCES_DIR)/icons/appicon.png $(BUILD_DIR)/
+	@cp $(RESOURCES_DIR)/icons/icon.ico $(BUILD_DIR)/windows/
+	@cp $(RESOURCES_DIR)/Info.plist $(BUILD_DIR)/darwin/
+	@cp $(RESOURCES_DIR)/info.json $(BUILD_DIR)/windows/
+	@cp $(RESOURCES_DIR)/wails.exe.manifest $(BUILD_DIR)/windows/
 
 # ============================================
-# 开发相关
+# 开发与构建
 # ============================================
 
 .PHONY: dev
-dev:
-	$(WAILS) dev
-
-.PHONY: dev-frontend
-dev-frontend:
-	cd frontend && npm run dev
-
-.PHONY: dev-backend
-dev-backend:
-	$(GOCMD) run .
-
-# ============================================
-# 构建相关
-# ============================================
+dev: prepare-resources
+	wails dev
 
 .PHONY: build
-build:
-	$(WAILS) build -ldflags "$(LDFLAGS)"
-
-.PHONY: build-release
-build-release:
-	$(WAILS) build -clean -upx -ldflags "$(LDFLAGS)"
+build: prepare-resources
+	@mkdir -p $(DIST_DIR)
+	wails build -o $(DIST_DIR)/$(APP_NAME) -ldflags "$(LDFLAGS)"
 
 # ============================================
 # 跨平台构建
 # ============================================
 
 .PHONY: build-all
-build-all: build-linux build-windows build-darwin
-	@echo "✅ All platforms built successfully!"
+# build-all: build-linux build-windows build-darwin
+build-all: build-windows build-darwin
 
-.PHONY: build-linux
-build-linux:
-	@echo "📦 Building for Linux..."
-	mkdir -p $(DIST_DIR)/linux
-	$(WAILS) build -platform linux/amd64 -o $(DIST_DIR)/linux/$(APP_NAME)-linux-amd64 -ldflags "$(LDFLAGS)"
-	@echo "✅ Linux build complete: $(DIST_DIR)/linux/"
+build-linux: prepare-resources
+	@mkdir -p $(DIST_DIR)/linux
+	wails build -platform linux/amd64 -o $(DIST_DIR)/linux/$(APP_NAME)-$(VERSION)-linux-amd64 -ldflags "$(LDFLAGS)"
 
-.PHONY: build-linux-docker
 build-linux-docker:
-	@echo "🐳 Building for Linux using Docker..."
 	chmod +x scripts/build-linux.sh
-	./scripts/build-linux.sh
+	VERSION=$(VERSION) LDFLAGS="$(LDFLAGS)" ./scripts/build-linux.sh
 
-.PHONY: build-windows
-build-windows:
-	@echo "📦 Building for Windows..."
-	mkdir -p $(DIST_DIR)/windows
-	$(WAILS) build -platform windows/amd64 -o $(DIST_DIR)/windows/$(APP_NAME)-windows-amd64.exe -ldflags "$(LDFLAGS)"
-	@echo "✅ Windows build complete: $(DIST_DIR)/windows/"
+build-windows: prepare-resources
+	@mkdir -p $(DIST_DIR)/windows
+	wails build -platform windows/amd64 -o $(DIST_DIR)/windows/$(APP_NAME)-$(VERSION)-windows-amd64.exe -ldflags "$(LDFLAGS)"
 
-.PHONY: build-darwin
-build-darwin:
-	@echo "📦 Building for macOS..."
-	mkdir -p $(DIST_DIR)/darwin
-	$(WAILS) build -platform darwin/amd64 -o $(DIST_DIR)/darwin/$(APP_NAME)-darwin-amd64 -ldflags "$(LDFLAGS)"
-	$(WAILS) build -platform darwin/arm64 -o $(DIST_DIR)/darwin/$(APP_NAME)-darwin-arm64 -ldflags "$(LDFLAGS)"
-	@echo "✅ macOS build complete: $(DIST_DIR)/darwin/"
+build-darwin: build-darwin-amd64 build-darwin-arm64
 
-.PHONY: build-mac-app
-build-mac-app:
-	@echo "📦 Building macOS App Bundle (Universal)..."
-	$(WAILS) build -platform darwin/universal -ldflags "$(LDFLAGS)"
-	mkdir -p $(DIST_DIR)/macos
-	cp -R $(BUILD_DIR)/$(APP_NAME).app $(DIST_DIR)/macos/
-	@echo "✅ macOS App Bundle complete: $(DIST_DIR)/macos/$(APP_NAME).app"
+build-darwin-amd64: prepare-resources
+	@mkdir -p $(DIST_DIR)/darwin
+	wails build -platform darwin/amd64 -o $(DIST_DIR)/darwin/$(APP_NAME)-$(VERSION)-darwin-amd64 -ldflags "$(LDFLAGS)"
+
+build-darwin-arm64: prepare-resources
+	@mkdir -p $(DIST_DIR)/darwin
+	wails build -platform darwin/arm64 -o $(DIST_DIR)/darwin/$(APP_NAME)-$(VERSION)-darwin-arm64 -ldflags "$(LDFLAGS)"
+
+build-darwin-universal: prepare-resources
+	@mkdir -p $(DIST_DIR)/macos
+	wails build -platform darwin/universal -o $(DIST_DIR)/macos/$(APP_NAME).app -ldflags "$(LDFLAGS)"
 
 # ============================================
-# macOS DMG 打包
+# DMG 打包 (macOS)
 # ============================================
 
-.PHONY: dmg
-dmg: build-mac-app
-	@echo "📦 Creating macOS DMG (Universal)..."
-	rm -rf /tmp/$(APP_NAME)-dmg
-	mkdir -p /tmp/$(APP_NAME)-dmg
-	cp -R $(DIST_DIR)/macos/$(APP_NAME).app /tmp/$(APP_NAME)-dmg/
+define create-dmg
+	@rm -rf /tmp/$(APP_NAME)-dmg && mkdir -p /tmp/$(APP_NAME)-dmg
+	cp -R $(2) /tmp/$(APP_NAME)-dmg/
 	ln -sf /Applications /tmp/$(APP_NAME)-dmg/Applications
-	hdiutil create -volname "$(APP_DISPLAY_NAME)" \
-		-srcfolder /tmp/$(APP_NAME)-dmg \
-		-ov -format UDZO \
-		$(DIST_DIR)/$(DMG_NAME)-universal.dmg
-	rm -rf /tmp/$(APP_NAME)-dmg
-	@echo "✅ DMG created: $(DIST_DIR)/$(DMG_NAME)-universal.dmg"
+	hdiutil create -volname "$(APP_DISPLAY_NAME)" -srcfolder /tmp/$(APP_NAME)-dmg -ov -format UDZO $(DIST_DIR)/$(APP_NAME)-$(VERSION)-darwin-$(1).dmg
+	@rm -rf /tmp/$(APP_NAME)-dmg
+endef
 
-.PHONY: dmg-amd64
-dmg-amd64:
-	@echo "📦 Creating macOS DMG (AMD64)..."
-	$(WAILS) build -platform darwin/amd64 -ldflags "$(LDFLAGS)"
-	mkdir -p $(DIST_DIR)/macos
-	cp -R $(BUILD_DIR)/$(APP_NAME).app $(DIST_DIR)/macos/
-	rm -rf /tmp/$(APP_NAME)-dmg
-	mkdir -p /tmp/$(APP_NAME)-dmg
-	cp -R $(DIST_DIR)/macos/$(APP_NAME).app /tmp/$(APP_NAME)-dmg/
-	ln -sf /Applications /tmp/$(APP_NAME)-dmg/Applications
-	hdiutil create -volname "$(APP_DISPLAY_NAME)" \
-		-srcfolder /tmp/$(APP_NAME)-dmg \
-		-ov -format UDZO \
-		$(DIST_DIR)/$(APP_NAME)-$(VERSION)-darwin-amd64.dmg
-	rm -rf /tmp/$(APP_NAME)-dmg
-	@echo "✅ DMG created: $(DIST_DIR)/$(APP_NAME)-$(VERSION)-darwin-amd64.dmg"
+.PHONY: dmg-amd64 dmg-arm64 dmg dmg-all
+dmg-all: dmg-amd64 dmg-arm64
 
-.PHONY: dmg-arm64
-dmg-arm64:
-	@echo "📦 Creating macOS DMG (ARM64)..."
-	$(WAILS) build -platform darwin/arm64 -ldflags "$(LDFLAGS)"
-	mkdir -p $(DIST_DIR)/macos
-	cp -R $(BUILD_DIR)/$(APP_NAME).app $(DIST_DIR)/macos/
-	rm -rf /tmp/$(APP_NAME)-dmg
-	mkdir -p /tmp/$(APP_NAME)-dmg
-	cp -R $(DIST_DIR)/macos/$(APP_NAME).app /tmp/$(APP_NAME)-dmg/
-	ln -sf /Applications /tmp/$(APP_NAME)-dmg/Applications
-	hdiutil create -volname "$(APP_DISPLAY_NAME)" \
-		-srcfolder /tmp/$(APP_NAME)-dmg \
-		-ov -format UDZO \
-		$(DIST_DIR)/$(APP_NAME)-$(VERSION)-darwin-arm64.dmg
-	rm -rf /tmp/$(APP_NAME)-dmg
-	@echo "✅ DMG created: $(DIST_DIR)/$(APP_NAME)-$(VERSION)-darwin-arm64.dmg"
+dmg: build-darwin-universal
+	$(call create-dmg,universal,$(DIST_DIR)/macos/$(APP_NAME).app)
+
+dmg-amd64: prepare-resources
+	@mkdir -p $(DIST_DIR)/macos
+	wails build -platform darwin/amd64 -o $(DIST_DIR)/macos/$(APP_NAME)-amd64.app -ldflags "$(LDFLAGS)"
+	$(call create-dmg,amd64,$(DIST_DIR)/macos/$(APP_NAME)-amd64.app)
+
+dmg-arm64: prepare-resources
+	@mkdir -p $(DIST_DIR)/macos
+	wails build -platform darwin/arm64 -o $(DIST_DIR)/macos/$(APP_NAME)-arm64.app -ldflags "$(LDFLAGS)"
+	$(call create-dmg,arm64,$(DIST_DIR)/macos/$(APP_NAME)-arm64.app)
 
 # ============================================
-# 打包发布
+# 测试与检查
 # ============================================
 
-.PHONY: package-all
-package-all: package-linux package-windows package-darwin dmg
-	@echo "✅ All packages created in $(DIST_DIR)/"
-
-.PHONY: package-linux
-package-linux: build-linux
-	@echo "📦 Packaging Linux..."
-	cd $(DIST_DIR)/linux && \
-		tar -czvf $(APP_NAME)-$(VERSION)-linux-amd64.tar.gz $(APP_NAME)-linux-amd64
-	@echo "✅ Linux packages created!"
-
-.PHONY: package-windows
-package-windows: build-windows
-	@echo "📦 Packaging Windows..."
-	cd $(DIST_DIR)/windows && \
-		zip -r $(APP_NAME)-$(VERSION)-windows-amd64.zip $(APP_NAME)-windows-amd64.exe
-	@echo "✅ Windows packages created!"
-
-.PHONY: package-darwin
-package-darwin: build-darwin
-	@echo "📦 Packaging macOS..."
-	cd $(DIST_DIR)/darwin && \
-		tar -czvf $(APP_NAME)-$(VERSION)-darwin-amd64.tar.gz $(APP_NAME)-darwin-amd64 && \
-		tar -czvf $(APP_NAME)-$(VERSION)-darwin-arm64.tar.gz $(APP_NAME)-darwin-arm64
-	@echo "✅ macOS packages created!"
-
-# ============================================
-# 测试相关
-# ============================================
-
-.PHONY: test
+.PHONY: test test-short lint fmt check
 test:
-	$(GOCMD) test ./... -v
+	go test ./... -v
 
-.PHONY: test-short
 test-short:
-	$(GOCMD) test ./... -short
+	go test ./... -short
 
-.PHONY: test-coverage
-test-coverage:
-	$(GOCMD) test ./... -coverprofile=coverage.out
-	$(GOCMD) tool cover -html=coverage.out -o coverage.html
-	@echo "📊 Coverage report: coverage.html"
-
-.PHONY: test-coverage-summary
-test-coverage-summary:
-	$(GOCMD) test ./... -cover
-
-.PHONY: bench
-bench:
-	$(GOCMD) test ./... -bench=. -benchmem
-
-# ============================================
-# 代码检查
-# ============================================
-
-.PHONY: lint
 lint:
-	$(GOCMD) vet ./...
-	cd frontend && npm run lint || true
+	go vet ./...
 
-.PHONY: fmt
 fmt:
-	$(GOCMD) fmt ./...
+	go fmt ./...
 
-.PHONY: check
 check: fmt lint test-short
-	@echo "✅ All checks passed!"
 
 # ============================================
-# 清理
+# 清理与安装
 # ============================================
 
-.PHONY: clean
+.PHONY: clean install-deps install-wails
 clean:
-	rm -rf $(BUILD_DIR)
-	rm -rf $(DIST_DIR)
-	rm -rf frontend/dist
+	rm -rf $(DIST_DIR) $(BUILD_DIR)/bin
 	rm -f coverage.out coverage.html
-	@echo "🧹 Clean complete!"
+	@mkdir -p frontend/dist && touch frontend/dist/.gitkeep
 
-.PHONY: clean-deps
-clean-deps:
-	rm -rf frontend/node_modules
-	rm -rf $(BUILD_DIR)
-	@echo "🧹 Dependencies cleaned!"
-
-# ============================================
-# 安装依赖
-# ============================================
-
-.PHONY: install-deps
 install-deps:
 	cd frontend && npm install
-	@echo "✅ Dependencies installed!"
 
-.PHONY: install-wails
 install-wails:
-	$(GOCMD) install github.com/wailsapp/wails/v2/cmd/wails@latest
-	@echo "✅ Wails installed!"
-
-.PHONY: init
-init: install-deps
-	$(WAILS) init
-
-# ============================================
-# 发布
-# ============================================
-
-.PHONY: release
-release: clean check build-release package-all
-	@echo "✅ Release $(VERSION) complete!"
-
-.PHONY: release-mac
-release-mac: clean check dmg
-	@echo "✅ macOS Release $(VERSION) complete!"
+	go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
 # ============================================
 # 帮助
@@ -286,52 +144,11 @@ release-mac: clean check dmg
 
 .PHONY: help
 help:
-	@echo "Crayon Terminal - Makefile Commands"
+	@echo "Crayon Terminal $(VERSION)"
 	@echo ""
-	@echo "Development:"
-	@echo "  make dev              - 启动开发服务器"
-	@echo "  make dev-frontend     - 仅启动前端开发服务器"
-	@echo "  make dev-backend      - 仅启动后端开发服务器"
-	@echo ""
-	@echo "Building:"
-	@echo "  make build            - 构建当前平台"
-	@echo "  make build-release    - 构建优化版本"
-	@echo "  make build-all        - 构建所有平台"
-	@echo "  make build-linux      - 构建 Linux (amd64)"
-	@echo "  make build-windows    - 构建 Windows (amd64)"
-	@echo "  make build-darwin     - 构建 macOS (amd64/arm64)"
-	@echo "  make build-mac-app    - 构建 macOS App Bundle"
-	@echo ""
-	@echo "macOS DMG:"
-	@echo "  make dmg              - 创建 Universal DMG"
-	@echo "  make dmg-amd64        - 创建 Intel Mac DMG"
-	@echo "  make dmg-arm64        - 创建 Apple Silicon DMG"
-	@echo ""
-	@echo "Packaging:"
-	@echo "  make package-all      - 打包所有平台"
-	@echo "  make package-linux    - 打包 Linux"
-	@echo "  make package-windows  - 打包 Windows"
-	@echo "  make package-darwin   - 打包 macOS tarball"
-	@echo ""
-	@echo "Testing:"
-	@echo "  make test             - 运行所有测试"
-	@echo "  make test-short       - 运行快速测试"
-	@echo "  make test-coverage    - 生成测试覆盖率报告"
-	@echo "  make bench            - 运行性能测试"
-	@echo ""
-	@echo "Code Quality:"
-	@echo "  make lint             - 运行代码检查"
-	@echo "  make fmt              - 格式化代码"
-	@echo "  make check            - 运行所有检查"
-	@echo ""
-	@echo "Release:"
-	@echo "  make release          - 完整发布流程"
-	@echo "  make release-mac      - macOS 发布"
-	@echo ""
-	@echo "Utility:"
-	@echo "  make clean            - 清理构建产物"
-	@echo "  make clean-deps       - 清理依赖"
-	@echo "  make install-deps     - 安装依赖"
-	@echo "  make install-wails    - 安装 Wails CLI"
-	@echo ""
-	@echo "Version: $(VERSION)"
+	@echo "开发:    dev"
+	@echo "构建:    build, build-all, build-linux, build-windows, build-darwin"
+	@echo "DMG:     dmg, dmg-amd64, dmg-arm64"
+	@echo "测试:    test, test-short, check"
+	@echo "清理:    clean"
+	@echo "安装:    install-deps, install-wails"

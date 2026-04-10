@@ -3,4 +3,9 @@
 build
 dist
 frontend/node_modules
-frontend/dist
+frontend/dist/*
+!frontend/dist/.gitkeep
+coverage.*
+*.log
+*.tmp
+*.bak
