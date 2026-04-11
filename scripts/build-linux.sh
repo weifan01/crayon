@@ -26,25 +26,16 @@ docker run --rm \
   -w /app \
   -e CGO_ENABLED=1 \
   -e VERSION="$VERSION" \
-  golang:1.22-bookworm \
+  3070656869/wails-build:v0.0.1 \
   /bin/bash -c '
     set -e
-    sed -i "s/deb.debian.org/mirrors.tuna.tsinghua.edu.cn/g" /etc/apt/sources.list.d/debian.sources && \
-	apt-get update && apt install -y \
-      nodejs \
-      npm \
-      build-essential \
-      libgtk-3-dev \
-      libwebkit2gtk-4.0-dev \
-      && rm -rf /var/lib/apt/lists/*
-    go install github.com/wailsapp/wails/v2/cmd/wails@latest
     cd frontend && npm install && cd ..
-    wails build -platform linux/amd64 -o dist/linux/crayon-$VERSION-linux-amd64 -ldflags "'"$LDFLAGS"'"
+    wails build -platform linux/amd64 -o crayon-$VERSION-linux-amd64 -ldflags "'"$LDFLAGS"'"
   '
 
-echo "✅ Linux build complete: dist/linux/crayon-$VERSION-linux-amd64"
+echo "✅ Linux build complete: build/bin/dist/linux/crayon-$VERSION-linux-amd64"
 
 echo "📦 Creating tarball..."
-cd dist/linux && tar -czvf crayon-"$VERSION"-linux-amd64.tar.gz crayon-"$VERSION"-linux-amd64
+cd dist/linux && tar -czvf crayon-"$VERSION"-linux-amd64.tar.gz /app/build/bin/crayon-"$VERSION"-linux-amd64
 
 echo "✅ Package ready: dist/linux/crayon-$VERSION-linux-amd64.tar.gz"

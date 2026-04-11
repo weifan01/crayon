@@ -21,10 +21,9 @@ APP_DISPLAY_NAME := Crayon
 
 .PHONY: prepare-resources
 prepare-resources:
-	@mkdir -p $(BUILD_DIR)/darwin $(BUILD_DIR)/windows
+	@mkdir -p $(BUILD_DIR)/windows
 	@cp $(RESOURCES_DIR)/icons/appicon.png $(BUILD_DIR)/
 	@cp $(RESOURCES_DIR)/icons/icon.ico $(BUILD_DIR)/windows/
-	@cp $(RESOURCES_DIR)/Info.plist $(BUILD_DIR)/darwin/
 	@cp $(RESOURCES_DIR)/info.json $(BUILD_DIR)/windows/
 	@cp $(RESOURCES_DIR)/wails.exe.manifest $(BUILD_DIR)/windows/
 
@@ -39,19 +38,19 @@ dev: prepare-resources
 .PHONY: build
 build: prepare-resources
 	@mkdir -p $(DIST_DIR)
-	wails build -o $(DIST_DIR)/$(APP_NAME) -ldflags "$(LDFLAGS)"
+	wails build -o $(APP_NAME) -ldflags "$(LDFLAGS)"
 
 # ============================================
 # 跨平台构建
 # ============================================
 
 .PHONY: build-all
-# build-all: build-linux build-windows build-darwin
-build-all: build-windows build-darwin
+build-all: build-windows build-macos
 
 build-linux: prepare-resources
 	@mkdir -p $(DIST_DIR)/linux
-	wails build -platform linux/amd64 -o $(DIST_DIR)/linux/$(APP_NAME)-$(VERSION)-linux-amd64 -ldflags "$(LDFLAGS)"
+	wails build -platform linux/amd64 -o $(APP_NAME)-$(VERSION)-linux-amd64 -ldflags "$(LDFLAGS)"
+	@mv build/bin/$(APP_NAME)-$(VERSION)-linux-amd64 $(DIST_DIR)/linux/
 
 build-linux-docker:
 	chmod +x scripts/build-linux.sh
@@ -59,21 +58,28 @@ build-linux-docker:
 
 build-windows: prepare-resources
 	@mkdir -p $(DIST_DIR)/windows
-	wails build -platform windows/amd64 -o $(DIST_DIR)/windows/$(APP_NAME)-$(VERSION)-windows-amd64.exe -ldflags "$(LDFLAGS)"
+	wails build -platform windows/amd64 -o $(APP_NAME)-$(VERSION)-windows-amd64.exe -ldflags "$(LDFLAGS)"
+	@mv build/bin/$(APP_NAME)-$(VERSION)-windows-amd64.exe $(DIST_DIR)/windows/
 
-build-darwin: build-darwin-amd64 build-darwin-arm64
+build-macos: build-macos-amd64 build-macos-arm64
 
-build-darwin-amd64: prepare-resources
-	@mkdir -p $(DIST_DIR)/darwin
-	wails build -platform darwin/amd64 -o $(DIST_DIR)/darwin/$(APP_NAME)-$(VERSION)-darwin-amd64 -ldflags "$(LDFLAGS)"
-
-build-darwin-arm64: prepare-resources
-	@mkdir -p $(DIST_DIR)/darwin
-	wails build -platform darwin/arm64 -o $(DIST_DIR)/darwin/$(APP_NAME)-$(VERSION)-darwin-arm64 -ldflags "$(LDFLAGS)"
-
-build-darwin-universal: prepare-resources
+build-macos-amd64: prepare-resources
 	@mkdir -p $(DIST_DIR)/macos
-	wails build -platform darwin/universal -o $(DIST_DIR)/macos/$(APP_NAME).app -ldflags "$(LDFLAGS)"
+	wails build -platform darwin/amd64 -o $(APP_NAME)-$(VERSION)-macos-amd64.app -ldflags "$(LDFLAGS)"
+	@rm -rf $(DIST_DIR)/macos/$(APP_NAME)-$(VERSION)-macos-amd64.app
+	@mv build/bin/$(APP_NAME).app $(DIST_DIR)/macos/$(APP_NAME)-$(VERSION)-macos-amd64.app
+
+build-macos-arm64: prepare-resources
+	@mkdir -p $(DIST_DIR)/macos
+	wails build -platform darwin/arm64 -o $(APP_NAME)-$(VERSION)-macos-arm64.app -ldflags "$(LDFLAGS)"
+	@rm -rf $(DIST_DIR)/macos/$(APP_NAME)-$(VERSION)-macos-arm64.app
+	@mv build/bin/$(APP_NAME).app $(DIST_DIR)/macos/$(APP_NAME)-$(VERSION)-macos-arm64.app
+
+build-macos-universal: prepare-resources
+	@mkdir -p $(DIST_DIR)/macos
+	wails build -platform darwin/universal -o $(APP_NAME).app -ldflags "$(LDFLAGS)"
+	@rm -rf $(DIST_DIR)/macos/$(APP_NAME)-$(VERSION)-macos-universal.app
+	@mv build/bin/$(APP_NAME).app $(DIST_DIR)/macos/$(APP_NAME)-$(VERSION)-macos-universal.app
 
 # ============================================
 # DMG 打包 (macOS)
@@ -83,25 +89,21 @@ define create-dmg
 	@rm -rf /tmp/$(APP_NAME)-dmg && mkdir -p /tmp/$(APP_NAME)-dmg
 	cp -R $(2) /tmp/$(APP_NAME)-dmg/
 	ln -sf /Applications /tmp/$(APP_NAME)-dmg/Applications
-	hdiutil create -volname "$(APP_DISPLAY_NAME)" -srcfolder /tmp/$(APP_NAME)-dmg -ov -format UDZO $(DIST_DIR)/$(APP_NAME)-$(VERSION)-darwin-$(1).dmg
+	hdiutil create -volname "$(APP_DISPLAY_NAME)" -srcfolder /tmp/$(APP_NAME)-dmg -ov -format UDZO $(DIST_DIR)/macos/$(APP_NAME)-$(VERSION)-macos-$(1).dmg
 	@rm -rf /tmp/$(APP_NAME)-dmg
 endef
 
 .PHONY: dmg-amd64 dmg-arm64 dmg dmg-all
 dmg-all: dmg-amd64 dmg-arm64
 
-dmg: build-darwin-universal
-	$(call create-dmg,universal,$(DIST_DIR)/macos/$(APP_NAME).app)
+dmg: build-macos-universal
+	$(call create-dmg,universal,$(DIST_DIR)/macos/$(APP_NAME)-$(VERSION)-macos-universal.app)
 
-dmg-amd64: prepare-resources
-	@mkdir -p $(DIST_DIR)/macos
-	wails build -platform darwin/amd64 -o $(DIST_DIR)/macos/$(APP_NAME)-amd64.app -ldflags "$(LDFLAGS)"
-	$(call create-dmg,amd64,$(DIST_DIR)/macos/$(APP_NAME)-amd64.app)
+dmg-amd64: build-macos-amd64
+	$(call create-dmg,amd64,$(DIST_DIR)/macos/$(APP_NAME)-$(VERSION)-macos-amd64.app)
 
-dmg-arm64: prepare-resources
-	@mkdir -p $(DIST_DIR)/macos
-	wails build -platform darwin/arm64 -o $(DIST_DIR)/macos/$(APP_NAME)-arm64.app -ldflags "$(LDFLAGS)"
-	$(call create-dmg,arm64,$(DIST_DIR)/macos/$(APP_NAME)-arm64.app)
+dmg-arm64: build-macos-arm64
+	$(call create-dmg,arm64,$(DIST_DIR)/macos/$(APP_NAME)-$(VERSION)-macos-arm64.app)
 
 # ============================================
 # 测试与检查
@@ -147,8 +149,8 @@ help:
 	@echo "Crayon Terminal $(VERSION)"
 	@echo ""
 	@echo "开发:    dev"
-	@echo "构建:    build, build-all, build-linux, build-windows, build-darwin"
-	@echo "DMG:     dmg, dmg-amd64, dmg-arm64"
+	@echo "构建:    build, build-all, build-linux, build-windows, build-macos"
+	@echo "DMG:     dmg, dmg-all, dmg-amd64, dmg-arm64"
 	@echo "测试:    test, test-short, check"
 	@echo "清理:    clean"
 	@echo "安装:    install-deps, install-wails"

@@ -1,0 +1,21 @@
+# Crayon Linux Build Image
+# 预装所有构建依赖，加速 Linux 版本构建
+
+FROM golang:1.22-bookworm
+
+
+RUN sed -i "s/deb.debian.org/mirrors.tuna.tsinghua.edu.cn/g" /etc/apt/sources.list.d/debian.sources
+
+RUN apt-get update && apt install -y \
+    nodejs \
+    npm \
+    build-essential \
+    libgtk-3-dev \
+    libwebkit2gtk-4.0-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+WORKDIR /app
+
+CMD ["wails", "version"]
