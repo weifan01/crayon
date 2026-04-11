@@ -919,7 +919,7 @@ export function SettingsPanel({ onClose }: Props) {
                     {appInfo?.name || 'Crayon'}
                   </div>
                   <div className="text-lg" style={{ color: theme.ui.textPrimary }}>
-                    v{appInfo?.version || '-'}
+                    {appInfo?.version || '-'}
                   </div>
                   <div className="text-sm mt-2" style={{ color: theme.ui.textMuted }}>
                     {t('about.subtitle')}

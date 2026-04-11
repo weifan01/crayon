@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useSessionStore } from '../stores/sessionStore'
 import { useTerminalStore } from '../stores/terminalStore'
 import { useLocale } from '../stores/localeStore'
-import { APP_NAME, APP_VERSION } from '../version'
+import { APP_NAME, getAppInfo } from '../version'
 
 // 格式化时长（秒 -> HH:MM:SS）
 function formatDuration(seconds: number): string {
@@ -41,6 +41,12 @@ export function StatusBar() {
   const { t } = useLocale()
   const [currentTime, setCurrentTime] = useState(new Date())
   const [connectionDuration, setConnectionDuration] = useState(0)
+  const [version, setVersion] = useState('dev')
+
+  // 获取版本信息
+  useEffect(() => {
+    getAppInfo().then(info => setVersion(info.version))
+  }, [])
 
   // 更新当前时间
   useEffect(() => {
@@ -108,7 +114,7 @@ export function StatusBar() {
       {/* 右侧：当前时间和版本 */}
       <div className="ml-auto flex items-center gap-4">
         <span className="text-text-secondary font-mono">{formatTime(currentTime)}</span>
-        <span className="text-text-muted">{APP_NAME} {APP_VERSION}</span>
+        <span className="text-text-muted">{APP_NAME} {version}</span>
       </div>
     </div>
   )

@@ -3,7 +3,7 @@
 
 set -e
 
-VERSION=${VERSION:-"v1.0.2"}
+VERSION=${VERSION:-"v1.0.0"}
 LDFLAGS=${LDFLAGS:-"-s -w"}
 
 # 更新 wails.json 中的版本

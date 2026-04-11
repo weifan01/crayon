@@ -1,13 +1,13 @@
 # Crayon Terminal - Makefile
 
-VERSION   ?= v1.0.3
+VERSION   ?= v1.0.4
 BUILD_TIME := $(shell date +%Y-%m-%d)
 GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
 LDFLAGS := -s -w \
-	-X "crayon/internal/version.Version=$(VERSION)" \
-	-X "crayon/internal/version.BuildTime=$(BUILD_TIME)" \
-	-X "crayon/internal/version.GitCommit=$(GIT_COMMIT)"
+	-X "github.com/weifan01/crayon/internal/version.Version=$(VERSION)" \
+	-X "github.com/weifan01/crayon/internal/version.BuildTime=$(BUILD_TIME)" \
+	-X "github.com/weifan01/crayon/internal/version.GitCommit=$(GIT_COMMIT)"
 
 DIST_DIR     := dist
 RESOURCES_DIR := resources
@@ -19,8 +19,16 @@ APP_DISPLAY_NAME := Crayon
 # 资源准备
 # ============================================
 
+.PHONY: update-version
+update-version:
+	@if command -v sed >/dev/null 2>&1; then \
+		sed -i 's/"productVersion": "v[0-9.]*"/"productVersion": "$(VERSION)"/' wails.json; \
+	else \
+		sed -i '' 's/"productVersion": "v[0-9.]*"/"productVersion": "$(VERSION)"/' wails.json; \
+	fi
+
 .PHONY: prepare-resources
-prepare-resources:
+prepare-resources: update-version
 	@mkdir -p $(BUILD_DIR)/windows
 	@cp $(RESOURCES_DIR)/icons/appicon.png $(BUILD_DIR)/
 	@cp $(RESOURCES_DIR)/icons/icon.ico $(BUILD_DIR)/windows/
@@ -87,7 +95,7 @@ build-macos-universal: prepare-resources
 
 define create-dmg
 	@rm -rf /tmp/$(APP_NAME)-dmg && mkdir -p /tmp/$(APP_NAME)-dmg
-	cp -R $(2) /tmp/$(APP_NAME)-dmg/
+	cp -R $(2) /tmp/$(APP_NAME)-dmg/$(APP_NAME).app
 	ln -sf /Applications /tmp/$(APP_NAME)-dmg/Applications
 	hdiutil create -volname "$(APP_DISPLAY_NAME)" -srcfolder /tmp/$(APP_NAME)-dmg -ov -format UDZO $(DIST_DIR)/macos/$(APP_NAME)-$(VERSION)-macos-$(1).dmg
 	@rm -rf /tmp/$(APP_NAME)-dmg
@@ -154,3 +162,4 @@ help:
 	@echo "测试:    test, test-short, check"
 	@echo "清理:    clean"
 	@echo "安装:    install-deps, install-wails"
+	@echo "版本:    update-version (同步 wails.json)"
