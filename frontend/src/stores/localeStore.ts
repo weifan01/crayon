@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { api } from '../api/wails'
 
 export type Language = 'zh' | 'en'
 
@@ -776,6 +777,8 @@ export const useLocale = create<LocaleState>((set, get) => ({
   setLanguage: (lang) => {
     localStorage.setItem('app-language', lang)
     set({ language: lang })
+    // 同步到后端
+    api.setLanguage(lang).catch(err => console.error('Failed to set language in backend:', err))
   },
 
   t: (key: string) => {

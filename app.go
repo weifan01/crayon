@@ -30,12 +30,14 @@ type App struct {
 	logStore     *logger.Store
 	configDir    string
 	outputLoops  sync.Map // 记录哪些 tab 已经有输出循环在运行
+	language     string   // 当前语言设置 (zh/en)
 }
 
 // NewApp 创建应用
 func NewApp() *App {
 	return &App{
 		connManager: connection.NewManager(),
+		language:    "zh", // 默认中文
 	}
 }
 
@@ -74,7 +76,52 @@ func (a *App) startup(ctx context.Context) {
 	logDir := filepath.Join(a.configDir, "logs")
 	a.logStore = logger.NewStore(logDir)
 
+	// 加载语言设置
+	a.loadLanguage()
+
 	fmt.Println("Crayon started successfully")
+}
+
+// loadLanguage 加载保存的语言设置
+func (a *App) loadLanguage() {
+	langFile := filepath.Join(a.configDir, "language.json")
+	data, err := os.ReadFile(langFile)
+	if err != nil {
+		// 文件不存在，使用默认语言
+		return
+	}
+	var langData struct {
+		Language string `json:"language"`
+	}
+	if err := json.Unmarshal(data, &langData); err != nil {
+		return
+	}
+	if langData.Language == "zh" || langData.Language == "en" {
+		a.language = langData.Language
+	}
+}
+
+// SetLanguage 设置语言
+func (a *App) SetLanguage(lang string) {
+	if lang != "zh" && lang != "en" {
+		return
+	}
+	a.language = lang
+	// 保存到文件
+	langFile := filepath.Join(a.configDir, "language.json")
+	data := struct {
+		Language string `json:"language"`
+	}{Language: lang}
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return
+	}
+	os.WriteFile(langFile, jsonData, 0644)
+}
+
+// GetLanguage 获取当前语言
+func (a *App) GetLanguage() string {
+	return a.language
 }
 
 // shutdown 应用关闭
@@ -98,21 +145,35 @@ func (a *App) beforeClose(ctx context.Context) bool {
 	// 检查是否有已连接的会话
 	connectedCount := a.connManager.CountByStatus(connection.StatusConnected)
 	if connectedCount > 0 {
+		// 国际化文本
+		var title, message, closeBtn, cancelBtn string
+		if a.language == "zh" {
+			title = "关闭确认"
+			message = fmt.Sprintf("有 %d 个会话正在连接。确定要关闭应用程序吗？", connectedCount)
+			closeBtn = "关闭"
+			cancelBtn = "取消"
+		} else {
+			title = "Close Confirmation"
+			message = fmt.Sprintf("%d session(s) are connected. Are you sure you want to close the application?", connectedCount)
+			closeBtn = "Close"
+			cancelBtn = "Cancel"
+		}
+
 		// 显示确认对话框
 		result, err := runtime.MessageDialog(a.ctx, runtime.MessageDialogOptions{
 			Type:          runtime.QuestionDialog,
-			Title:         "Close Confirmation",
-			Message:       fmt.Sprintf("%d session(s) are connected. Are you sure you want to close the application?", connectedCount),
-			Buttons:       []string{"Close", "Cancel"},
-			DefaultButton: "Cancel",
-			CancelButton:  "Cancel",
+			Title:         title,
+			Message:       message,
+			Buttons:       []string{closeBtn, cancelBtn},
+			DefaultButton: cancelBtn,
+			CancelButton:  cancelBtn,
 		})
 		if err != nil {
 			// 出错时允许关闭
 			return false
 		}
 		// 返回 true 表示阻止关闭，false 表示允许关闭
-		return result != "Close"
+		return result != closeBtn
 	}
 	// 没有已连接的会话，允许关闭
 	return false
@@ -1248,18 +1309,28 @@ func parseTime(s string) session.FlexibleTime {
 
 // ConfirmDialog 确认对话框
 func (a *App) ConfirmDialog(title, message string) bool {
+	// 国际化按钮文本
+	var confirmBtn, cancelBtn string
+	if a.language == "zh" {
+		confirmBtn = "确定"
+		cancelBtn = "取消"
+	} else {
+		confirmBtn = "Confirm"
+		cancelBtn = "Cancel"
+	}
+
 	result, err := runtime.MessageDialog(a.ctx, runtime.MessageDialogOptions{
 		Type:          runtime.QuestionDialog,
 		Title:         title,
 		Message:       message,
-		Buttons:       []string{"确定", "取消"},
-		DefaultButton: "确定",
-		CancelButton:  "取消",
+		Buttons:       []string{confirmBtn, cancelBtn},
+		DefaultButton: confirmBtn,
+		CancelButton:  cancelBtn,
 	})
 	if err != nil {
 		return false
 	}
-	return result == "确定"
+	return result == confirmBtn
 }
 
 // Logger 相关方法

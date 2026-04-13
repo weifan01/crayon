@@ -54,6 +54,8 @@ export function GetCommand(arg1:string):Promise<command.Command>;
 
 export function GetHomeDir():Promise<string>;
 
+export function GetLanguage():Promise<string>;
+
 export function GetLogDir():Promise<string>;
 
 export function GetLogList():Promise<Array<logger.LogFileInfo>>;
@@ -119,6 +121,8 @@ export function SelectFiles(arg1:string,arg2:string,arg3:string):Promise<Array<s
 export function SendToSession(arg1:string,arg2:string):Promise<void>;
 
 export function SendToTab(arg1:string,arg2:string):Promise<void>;
+
+export function SetLanguage(arg1:string):Promise<void>;
 
 export function SetLoggingEnabled(arg1:boolean):Promise<void>;
 

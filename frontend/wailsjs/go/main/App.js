@@ -98,6 +98,10 @@ export function GetHomeDir() {
   return window['go']['main']['App']['GetHomeDir']();
 }
 
+export function GetLanguage() {
+  return window['go']['main']['App']['GetLanguage']();
+}
+
 export function GetLogDir() {
   return window['go']['main']['App']['GetLogDir']();
 }
@@ -228,6 +232,10 @@ export function SendToSession(arg1, arg2) {
 
 export function SendToTab(arg1, arg2) {
   return window['go']['main']['App']['SendToTab'](arg1, arg2);
+}
+
+export function SetLanguage(arg1) {
+  return window['go']['main']['App']['SetLanguage'](arg1);
 }
 
 export function SetLoggingEnabled(arg1) {

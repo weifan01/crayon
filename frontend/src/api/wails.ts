@@ -209,6 +209,10 @@ export const api = {
   // 对话框
   confirmDialog: (title: string, message: string): Promise<boolean> => getWailsAPI().ConfirmDialog(title, message),
 
+  // 语言设置
+  setLanguage: (lang: string): Promise<void> => getWailsAPI().SetLanguage(lang),
+  getLanguage: (): Promise<string> => getWailsAPI().GetLanguage(),
+
   // 背景图片
   saveBackgroundImage: (imageData: string, filename: string): Promise<string> =>
     getWailsAPI().SaveBackgroundImage(imageData, filename),

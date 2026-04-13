@@ -81,6 +81,15 @@ function App() {
 
   useEffect(() => { useSessionStore.getState().loadSessions() }, [])
 
+  // 启动时从后端同步语言设置
+  useEffect(() => {
+    api.getLanguage().then(lang => {
+      if (lang && (lang === 'zh' || lang === 'en')) {
+        useLocale.getState().setLanguage(lang)
+      }
+    }).catch(err => console.error('Failed to get language from backend:', err))
+  }, [])
+
   // 启动后设置焦点，确保键盘事件可以正常捕获
   useEffect(() => {
     // 延迟 focus，等待 splash screen 结束
