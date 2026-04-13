@@ -65,13 +65,18 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
   const [terminalReady, setTerminalReady] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
   const [searchAddonReady, setSearchAddonReady] = useState(false)
+  const [backgroundImageData, setBackgroundImageData] = useState<string>('')
   // 标记是否已注册事件监听
   const eventsRegisteredRef = useRef(false)
 
-  const { connectTab, disconnectTab, getTabStatus, setTabStatus, sendToTab, resizeTab } = useSessionStore()
-  const { getTerminalTheme, getTheme, terminalSettings, currentTheme } = useSettingsStore()
+  const { connectTab, disconnectTab, getTabStatus, setTabStatus, sendToTab, resizeTab, sessions } = useSessionStore()
+  const { getTerminalTheme, getTerminalThemeById, terminalSettings, currentTheme, backgroundSettings } = useSettingsStore()
   const { t } = useLocale()
   const localEchoRef = useRef<boolean>(true) // 默认启用本地回显，等待协商结果
+
+  // 全局背景是否应用到终端（scope 为 'terminal' 或 'both'）
+  const hasGlobalTerminalBg = backgroundSettings.enabled &&
+    (backgroundSettings.scope === 'terminal' || backgroundSettings.scope === 'both')
 
   // 使用 selector 获取 sessionId
   const sessionId = useTerminalStore(state => {
@@ -82,7 +87,40 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
 
   // 获取终端主题
   const terminalTheme = useMemo(() => getTerminalTheme(), [currentTheme, getTerminalTheme])
-  const appTheme = useMemo(() => getTheme(), [currentTheme, getTheme])
+
+  // 获取当前会话的个性化配置
+  const session = useMemo(() => sessionId ? sessions.find(s => s.id === sessionId) : undefined, [sessionId, sessions])
+  const useCustom = session?.useCustomSettings
+
+  // 计算有效配置
+  const effectiveConfig = useMemo(() => {
+    const sessionTheme = useCustom && session?.themeId ? getTerminalThemeById(session.themeId) : null
+    const effectiveTheme = sessionTheme || terminalTheme
+    return {
+      theme: effectiveTheme,
+      fontFamily: useCustom && session?.fontFamily ? session.fontFamily : terminalSettings.fontFamily,
+      fontSize: useCustom && session?.fontSize ? session.fontSize : terminalSettings.fontSize,
+      lineHeight: useCustom && session?.lineHeight ? session.lineHeight : 1.2,
+      letterSpacing: useCustom && session?.letterSpacing ? session.letterSpacing : 0,
+      cursorBlink: useCustom ? (session?.cursorBlink ?? true) : true,
+      cursorStyle: useCustom && session?.cursorStyle ? session.cursorStyle : 'block',
+      scrollback: useCustom && session?.scrollback ? session.scrollback : 10000,
+      // 背景图设置
+      backgroundImage: useCustom && session?.backgroundImage ? session.backgroundImage : '',
+      backgroundOpacity: useCustom && session?.backgroundOpacity ? session.backgroundOpacity : 50,
+      backgroundBlur: useCustom && session?.backgroundBlur ? session.backgroundBlur : 0,
+    }
+  }, [useCustom, session, terminalTheme, terminalSettings, getTerminalThemeById])
+
+  // 计算终端的背景色（有背景图时透明）
+  const effectiveTerminalBg = useMemo(() => {
+    // 会话有个性化背景时透明
+    if (useCustom && session?.backgroundImage) return 'transparent'
+    // 全局有终端背景时透明
+    if (hasGlobalTerminalBg) return 'transparent'
+    // 其他情况使用主题背景色
+    return effectiveConfig.theme.colors.background
+  }, [useCustom, session?.backgroundImage, hasGlobalTerminalBg, effectiveConfig.theme.colors.background])
 
   // paneId 作为连接标识符
   const connectionId = paneId
@@ -94,6 +132,38 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
     if (!tab) return undefined
     return findPaneSessionId(tab.rootPane, paneId)
   }, [tabId, paneId])
+
+  // 加载会话背景图
+  useEffect(() => {
+    const imagePath = effectiveConfig.backgroundImage
+    if (!imagePath) {
+      setBackgroundImageData('')
+      return
+    }
+    // 如果已经是完整的 data URL，直接使用
+    if (imagePath.startsWith('data:image')) {
+      setBackgroundImageData(imagePath)
+      return
+    }
+    // 否则通过 API 加载图片并添加 MIME 前缀
+    api.loadBackgroundImage(imagePath).then(base64 => {
+      // 根据文件扩展名确定 MIME 类型
+      const ext = imagePath.toLowerCase().split('.').pop()
+      const mimeTypes: Record<string, string> = {
+        'png': 'image/png',
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'gif': 'image/gif',
+        'webp': 'image/webp',
+        'bmp': 'image/bmp',
+      }
+      const mimeType = mimeTypes[ext || ''] || 'image/png'
+      setBackgroundImageData(`data:${mimeType};base64,${base64}`)
+    }).catch(err => {
+      console.error('Failed to load session background image:', err)
+      setBackgroundImageData('')
+    })
+  }, [effectiveConfig.backgroundImage])
 
   // 处理缓冲的数据
   const flushBuffer = () => {
@@ -177,6 +247,37 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
       eventsRegisteredRef.current = cached.eventsRegistered
       setSearchAddonReady(true)
 
+      // 从缓存恢复时立即应用最新配置
+      const term = cached.terminal
+      term.options.theme = {
+        background: effectiveTerminalBg,
+        foreground: effectiveConfig.theme.colors.foreground,
+        cursor: effectiveConfig.theme.colors.cursor,
+        selectionBackground: effectiveConfig.theme.colors.selectionBackground,
+        black: effectiveConfig.theme.colors.black,
+        red: effectiveConfig.theme.colors.red,
+        green: effectiveConfig.theme.colors.green,
+        yellow: effectiveConfig.theme.colors.yellow,
+        blue: effectiveConfig.theme.colors.blue,
+        magenta: effectiveConfig.theme.colors.magenta,
+        cyan: effectiveConfig.theme.colors.cyan,
+        white: effectiveConfig.theme.colors.white,
+        brightBlack: effectiveConfig.theme.colors.brightBlack,
+        brightRed: effectiveConfig.theme.colors.brightRed,
+        brightGreen: effectiveConfig.theme.colors.brightGreen,
+        brightYellow: effectiveConfig.theme.colors.brightYellow,
+        brightBlue: effectiveConfig.theme.colors.brightBlue,
+        brightMagenta: effectiveConfig.theme.colors.brightMagenta,
+        brightCyan: effectiveConfig.theme.colors.brightCyan,
+        brightWhite: effectiveConfig.theme.colors.brightWhite,
+      }
+      term.options.fontFamily = effectiveConfig.fontFamily
+      term.options.fontSize = effectiveConfig.fontSize
+      term.options.lineHeight = effectiveConfig.lineHeight
+      term.options.letterSpacing = effectiveConfig.letterSpacing
+      term.options.cursorBlink = effectiveConfig.cursorBlink
+      term.options.cursorStyle = effectiveConfig.cursorStyle
+
       terminalElement = cached.terminal.element
       if (terminalElement && ref.current) {
         ref.current.innerHTML = ''
@@ -195,34 +296,34 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
 
       const term = new Terminal({
         theme: {
-          background: terminalTheme.colors.background,
-          foreground: terminalTheme.colors.foreground,
-          cursor: terminalTheme.colors.cursor,
-          selectionBackground: terminalTheme.colors.selectionBackground,
-          black: terminalTheme.colors.black,
-          red: terminalTheme.colors.red,
-          green: terminalTheme.colors.green,
-          yellow: terminalTheme.colors.yellow,
-          blue: terminalTheme.colors.blue,
-          magenta: terminalTheme.colors.magenta,
-          cyan: terminalTheme.colors.cyan,
-          white: terminalTheme.colors.white,
-          brightBlack: terminalTheme.colors.brightBlack,
-          brightRed: terminalTheme.colors.brightRed,
-          brightGreen: terminalTheme.colors.brightGreen,
-          brightYellow: terminalTheme.colors.brightYellow,
-          brightBlue: terminalTheme.colors.brightBlue,
-          brightMagenta: terminalTheme.colors.brightMagenta,
-          brightCyan: terminalTheme.colors.brightCyan,
-          brightWhite: terminalTheme.colors.brightWhite,
+          background: effectiveTerminalBg,
+          foreground: effectiveConfig.theme.colors.foreground,
+          cursor: effectiveConfig.theme.colors.cursor,
+          selectionBackground: effectiveConfig.theme.colors.selectionBackground,
+          black: effectiveConfig.theme.colors.black,
+          red: effectiveConfig.theme.colors.red,
+          green: effectiveConfig.theme.colors.green,
+          yellow: effectiveConfig.theme.colors.yellow,
+          blue: effectiveConfig.theme.colors.blue,
+          magenta: effectiveConfig.theme.colors.magenta,
+          cyan: effectiveConfig.theme.colors.cyan,
+          white: effectiveConfig.theme.colors.white,
+          brightBlack: effectiveConfig.theme.colors.brightBlack,
+          brightRed: effectiveConfig.theme.colors.brightRed,
+          brightGreen: effectiveConfig.theme.colors.brightGreen,
+          brightYellow: effectiveConfig.theme.colors.brightYellow,
+          brightBlue: effectiveConfig.theme.colors.brightBlue,
+          brightMagenta: effectiveConfig.theme.colors.brightMagenta,
+          brightCyan: effectiveConfig.theme.colors.brightCyan,
+          brightWhite: effectiveConfig.theme.colors.brightWhite,
         },
-        fontFamily: terminalSettings.fontFamily,
-        fontSize: terminalSettings.fontSize,
-        lineHeight: 1.2,
-        letterSpacing: 0,
-        cursorBlink: true,
-        cursorStyle: 'block',
-        scrollback: 10000,
+        fontFamily: effectiveConfig.fontFamily,
+        fontSize: effectiveConfig.fontSize,
+        lineHeight: effectiveConfig.lineHeight,
+        letterSpacing: effectiveConfig.letterSpacing,
+        cursorBlink: effectiveConfig.cursorBlink,
+        cursorStyle: effectiveConfig.cursorStyle,
+        scrollback: effectiveConfig.scrollback,
         allowProposedApi: true,
         convertEol: true,
         disableStdin: false,
@@ -540,44 +641,46 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
     }
   }, [isActive, connectionId, getTabStatus, resizeTab])
 
-  // 主题切换
+  // 会话个性化配置变化时更新终端
   useEffect(() => {
     if (termRef.current) {
+      // 更新主题（背景色根据背景图状态决定）
       termRef.current.options.theme = {
-        background: terminalTheme.colors.background,
-        foreground: terminalTheme.colors.foreground,
-        cursor: terminalTheme.colors.cursor,
-        selectionBackground: terminalTheme.colors.selectionBackground,
-        black: terminalTheme.colors.black,
-        red: terminalTheme.colors.red,
-        green: terminalTheme.colors.green,
-        yellow: terminalTheme.colors.yellow,
-        blue: terminalTheme.colors.blue,
-        magenta: terminalTheme.colors.magenta,
-        cyan: terminalTheme.colors.cyan,
-        white: terminalTheme.colors.white,
-        brightBlack: terminalTheme.colors.brightBlack,
-        brightRed: terminalTheme.colors.brightRed,
-        brightGreen: terminalTheme.colors.brightGreen,
-        brightYellow: terminalTheme.colors.brightYellow,
-        brightBlue: terminalTheme.colors.brightBlue,
-        brightMagenta: terminalTheme.colors.brightMagenta,
-        brightCyan: terminalTheme.colors.brightCyan,
-        brightWhite: terminalTheme.colors.brightWhite,
+        background: effectiveTerminalBg,
+        foreground: effectiveConfig.theme.colors.foreground,
+        cursor: effectiveConfig.theme.colors.cursor,
+        selectionBackground: effectiveConfig.theme.colors.selectionBackground,
+        black: effectiveConfig.theme.colors.black,
+        red: effectiveConfig.theme.colors.red,
+        green: effectiveConfig.theme.colors.green,
+        yellow: effectiveConfig.theme.colors.yellow,
+        blue: effectiveConfig.theme.colors.blue,
+        magenta: effectiveConfig.theme.colors.magenta,
+        cyan: effectiveConfig.theme.colors.cyan,
+        white: effectiveConfig.theme.colors.white,
+        brightBlack: effectiveConfig.theme.colors.brightBlack,
+        brightRed: effectiveConfig.theme.colors.brightRed,
+        brightGreen: effectiveConfig.theme.colors.brightGreen,
+        brightYellow: effectiveConfig.theme.colors.brightYellow,
+        brightBlue: effectiveConfig.theme.colors.brightBlue,
+        brightMagenta: effectiveConfig.theme.colors.brightMagenta,
+        brightCyan: effectiveConfig.theme.colors.brightCyan,
+        brightWhite: effectiveConfig.theme.colors.brightWhite,
       }
-    }
-  }, [terminalTheme])
-
-  // 字体设置变化
-  useEffect(() => {
-    if (termRef.current) {
-      termRef.current.options.fontFamily = terminalSettings.fontFamily
-      termRef.current.options.fontSize = terminalSettings.fontSize
+      // 更新字体
+      termRef.current.options.fontFamily = effectiveConfig.fontFamily
+      termRef.current.options.fontSize = effectiveConfig.fontSize
+      termRef.current.options.lineHeight = effectiveConfig.lineHeight
+      termRef.current.options.letterSpacing = effectiveConfig.letterSpacing
+      // 更新光标
+      termRef.current.options.cursorBlink = effectiveConfig.cursorBlink
+      termRef.current.options.cursorStyle = effectiveConfig.cursorStyle
+      // fit 终端
       if (fitRef.current) {
         fitRef.current.fit()
       }
     }
-  }, [terminalSettings.fontFamily, terminalSettings.fontSize])
+  }, [effectiveConfig, effectiveTerminalBg])
 
   // 搜索快捷键 (Cmd+F / Ctrl+F)
   useEffect(() => {
@@ -594,8 +697,31 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [isActive])
 
+  // 是否使用会话个性化背景（需要启用个性化设置、有背景图片路径、且图片数据已加载）
+  const hasSessionBackground = useCustom && session?.backgroundImage && !!backgroundImageData
+
+  // 计算背景层样式
+  const backgroundStyle = useMemo(() => {
+    if (!hasSessionBackground) return null
+    return {
+      backgroundImage: `url(${backgroundImageData})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat',
+      opacity: effectiveConfig.backgroundOpacity / 100,
+      filter: effectiveConfig.backgroundBlur > 0 ? `blur(${effectiveConfig.backgroundBlur}px)` : undefined,
+    }
+  }, [hasSessionBackground, backgroundImageData, effectiveConfig.backgroundOpacity, effectiveConfig.backgroundBlur])
+
   return (
-    <div className="h-full w-full relative flex flex-col terminal-bg overflow-hidden">
+    <div className={`h-full w-full relative flex flex-col terminal-bg overflow-hidden ${hasSessionBackground ? 'has-session-bg' : ''}`}>
+      {/* 背景图层 - 仅在会话有个性化背景时显示 */}
+      {backgroundStyle && (
+        <div
+          className="absolute inset-0 z-0"
+          style={backgroundStyle}
+        />
+      )}
       {/* 顶部搜索栏 */}
       {showSearch && searchAddonReady && terminalSettings.searchBarPosition === 'top' && (
         <TerminalSearchBar
@@ -603,14 +729,18 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
           searchAddon={searchAddonRef.current}
           onClose={() => setShowSearch(false)}
           position="top"
-          terminalBackground={terminalTheme.colors.background}
+          terminalBackground={effectiveConfig.theme.colors.background}
         />
       )}
 
       <div
         ref={ref}
-        className="flex-1 w-full overflow-hidden"
-        style={{ backgroundColor: terminalTheme.colors.background }}
+        className="flex-1 w-full overflow-hidden relative z-10"
+        style={{
+          backgroundColor: (hasSessionBackground || hasGlobalTerminalBg)
+            ? 'transparent'
+            : effectiveConfig.theme.colors.background
+        }}
       />
 
       {/* 底部搜索栏 */}
@@ -620,7 +750,7 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
           searchAddon={searchAddonRef.current}
           onClose={() => setShowSearch(false)}
           position="bottom"
-          terminalBackground={terminalTheme.colors.background}
+          terminalBackground={effectiveConfig.theme.colors.background}
         />
       )}
 

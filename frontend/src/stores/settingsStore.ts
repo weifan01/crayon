@@ -21,6 +21,8 @@ interface ShortcutSettings {
   splitVertical: string     // 垂直分屏（左右）
   splitHorizontal: string   // 水平分屏（上下）
   closePane: string         // 关闭当前分屏
+  quickConnect: string      // 快速连接
+  toggleFullscreen: string  // 切换全屏
 }
 
 // 默认背景设置
@@ -39,8 +41,11 @@ interface SettingsState {
   terminalSettings: TerminalSettings
   shortcutSettings: ShortcutSettings
   backgroundSettings: BackgroundSettings
+  themes: AppTheme[]  // 新增：所有可用主题列表
   getTheme: () => AppTheme
+  getThemeById: (themeId: string) => AppTheme | undefined  // 新增：按 ID 获取主题
   getTerminalTheme: () => TerminalTheme
+  getTerminalThemeById: (themeId: string) => TerminalTheme | undefined  // 新增：按 ID 获取终端主题
   setTheme: (themeId: string) => void
   setTerminalSettings: (settings: Partial<TerminalSettings>) => void
   setShortcutSettings: (settings: Partial<ShortcutSettings>) => void
@@ -56,11 +61,13 @@ const defaultShortcuts: ShortcutSettings = {
   openSettings: 'Meta+,',      // Mac: Cmd+,, Windows: Ctrl+,
   newTab: 'Meta+T',           // Mac: Cmd+T, Windows: Ctrl+T
   closeTab: 'Meta+W',         // Mac: Cmd+W, Windows: Ctrl+W
-  nextTab: 'Meta+Tab',        // Mac: Cmd+Tab
-  prevTab: 'Meta+Shift+Tab',  // Mac: Cmd+Shift+Tab
+  nextTab: 'Control+Tab',     // Ctrl+Tab 切换到下一个
+  prevTab: 'Control+Shift+Tab', // Ctrl+Shift+Tab 切换到上一个
   splitVertical: 'Meta+D',        // Mac: Cmd+D 垂直分屏（左右）
   splitHorizontal: 'Meta+Shift+D', // Mac: Cmd+Shift+D 水平分屏（上下）
   closePane: 'Meta+Shift+W',     // Mac: Cmd+Shift+W 关闭当前分屏
+  quickConnect: 'Meta+K',        // Mac: Cmd+K 快速连接
+  toggleFullscreen: 'Meta+Enter', // Mac: Cmd+Enter 切换全屏
 }
 
 // 格式化快捷键显示
@@ -290,16 +297,26 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   terminalSettings: initialSettings,
   shortcutSettings: initialShortcuts,
   backgroundSettings: initialBackgroundSettings,
+  themes: appThemes,  // 导出所有主题
 
   getTheme: () => {
     const themeId = get().currentTheme
     return appThemes.find(t => t.id === themeId) || appThemes[0]
   },
 
+  getThemeById: (themeId: string) => {
+    return appThemes.find(t => t.id === themeId)
+  },
+
   getTerminalTheme: () => {
     const themeId = get().currentTheme
     const theme = appThemes.find(t => t.id === themeId) || appThemes[0]
     return toTerminalTheme(theme)
+  },
+
+  getTerminalThemeById: (themeId: string) => {
+    const theme = appThemes.find(t => t.id === themeId)
+    return theme ? toTerminalTheme(theme) : undefined
   },
 
   setTheme: (themeId: string) => {

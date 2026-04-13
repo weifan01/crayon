@@ -101,6 +101,19 @@ type Session struct {
 	UpdatedAt   FlexibleTime `json:"updatedAt"`
 	LastUsedAt  FlexibleTime `json:"lastUsedAt"`
 	Tags        []string     `json:"tags"`
+	// 个性化设置
+	UseCustomSettings bool    `json:"useCustomSettings"` // 启用个性化设置
+	Scrollback        int     `json:"scrollback"`        // 滚动缓冲区行数
+	// 背景设置
+	BackgroundImage   string `json:"backgroundImage"`   // 背景图片路径
+	BackgroundOpacity int    `json:"backgroundOpacity"` // 背景透明度 (0-100)
+	BackgroundBlur    int    `json:"backgroundBlur"`    // 背景模糊度 (0-20)
+	// 光标设置
+	CursorStyle string `json:"cursorStyle"` // 光标样式: block | underline | bar
+	CursorBlink bool   `json:"cursorBlink"` // 光标是否闪烁
+	// 样式设置
+	LineHeight        float64 `json:"lineHeight"`        // 行高倍数 (1.0-2.0)
+	LetterSpacing     float64 `json:"letterSpacing"`     // 字间距 (0-10)
 }
 
 // Group 会话分组
@@ -123,17 +136,25 @@ type GroupNode struct {
 func NewSession(name string, protocol Protocol) *Session {
 	now := FlexibleTime{Time: time.Now()}
 	return &Session{
-		ID:           generateSessionID(),
-		Name:         name,
-		Protocol:     protocol,
-		Port:         defaultPort(protocol),
-		TerminalType: "xterm-256color",
-		FontSize:     14,
-		FontFamily:   "Monaco, Menlo, monospace",
-		Encoding:     "UTF-8",
-		KeepAlive:    30,
-		CreatedAt:    now,
-		UpdatedAt:    now,
+		ID:                generateSessionID(),
+		Name:              name,
+		Protocol:          protocol,
+		Port:              defaultPort(protocol),
+		TerminalType:      "xterm-256color",
+		FontSize:          14,
+		FontFamily:        "Monaco, Menlo, monospace",
+		Encoding:          "UTF-8",
+		KeepAlive:         30,
+		CreatedAt:         now,
+		UpdatedAt:         now,
+		UseCustomSettings: false,
+		BackgroundOpacity: 50,
+		BackgroundBlur:    0,
+		CursorStyle:       "block",
+		CursorBlink:       true,
+		LineHeight:        1.2,
+		LetterSpacing:     0,
+		Scrollback:        10000,
 	}
 }
 

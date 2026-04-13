@@ -1157,6 +1157,24 @@ html[data-custom-bg="both"] .xterm-viewport {
 
 /* 确保应用内容正常显示 */
 
+/* 会话有个性化背景时，隐藏全局终端背景层 */
+.terminal-bg.has-session-bg::before {
+  display: none !important;
+}
+
+/* 会话有个性化背景时，终端透明 */
+.terminal-bg.has-session-bg .xterm-screen,
+.terminal-bg.has-session-bg .xterm-viewport {
+  background-color: transparent !important;
+}
+
+/* 会话背景层样式 - 确保 z-index 正确 */
+.terminal-bg.has-session-bg > div:first-child {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+}
+
 /* 背景设置面板中的图片预览 */
 .bg-preview-container {
   position: relative;

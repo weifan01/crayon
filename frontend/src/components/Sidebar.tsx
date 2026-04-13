@@ -1,12 +1,270 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useSessionStore } from '../stores/sessionStore'
 import { useSidebarSettings } from '../stores/sidebarSettingsStore'
+import { useSettingsStore } from '../stores/settingsStore'
 import { useLocale } from '../stores/localeStore'
-import { Plus, Folder, Server, Edit3, Trash2, Copy, MoveRight, ChevronRight, ChevronDown, PanelLeftClose, Pin, GripVertical, Settings, FolderPlus, Terminal, Zap, X, CheckSquare, Key, Globe, Cpu, ListTree, ListMinus } from 'lucide-react'
-import type { Session, GroupNode } from '../api/wails'
+import { Plus, Folder, Server, Edit3, Trash2, Copy, MoveRight, ChevronRight, ChevronDown, PanelLeftClose, Pin, GripVertical, Settings, FolderPlus, Terminal, Zap, X, CheckSquare, Key, Globe, Cpu, ListTree, ListMinus, Sliders, Image, Type, Upload, Trash } from 'lucide-react'
+import type { Session, GroupNode, BackgroundFileInfo } from '../api/wails'
+import { api } from '../api/wails'
 import { GroupManager } from './GroupManager'
 import { CommandPanel } from './CommandPanel'
 import { QuickConnect } from './QuickConnect'
+
+// 背景图片选择器（带预览）
+function BackgroundImageSelector({
+  selected,
+  onSelect,
+  opacity,
+  blur,
+  onOpacityChange,
+  onBlurChange
+}: {
+  selected: string
+  onSelect: (filename: string) => void
+  opacity: number
+  blur: number
+  onOpacityChange: (value: number) => void
+  onBlurChange: (value: number) => void
+}) {
+  const { t } = useLocale()
+  const theme = useSettingsStore.getState().getTheme()
+  const [images, setImages] = useState<BackgroundFileInfo[]>([])
+  const [loading, setLoading] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
+
+  // 加载已保存图片列表
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true)
+      try {
+        const list = await api.listBackgroundImages()
+        setImages(list || [])
+      } catch (e) {
+        console.error('Failed to load saved images:', e)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
+
+  // 加载预览图片
+  useEffect(() => {
+    if (!selected) {
+      setPreviewUrl(null)
+      return
+    }
+    const loadPreview = async () => {
+      try {
+        const base64Data = await api.loadBackgroundImage(selected)
+        const ext = selected.toLowerCase().split('.').pop()
+        const mimeTypes: Record<string, string> = {
+          'png': 'image/png',
+          'jpg': 'image/jpeg',
+          'jpeg': 'image/jpeg',
+          'gif': 'image/gif',
+          'webp': 'image/webp',
+          'bmp': 'image/bmp',
+        }
+        const mimeType = mimeTypes[ext || ''] || 'image/png'
+        setPreviewUrl(`data:${mimeType};base64,${base64Data}`)
+      } catch (e) {
+        console.error('Failed to load preview:', e)
+        setPreviewUrl(null)
+      }
+    }
+    loadPreview()
+  }, [selected])
+
+  // 上传新图片
+  const handleUpload = async () => {
+    try {
+      setUploading(true)
+      const filePath = await api.selectFile(t('background.selectImage'), '', 'Image Files:*.png;*.jpg;*.jpeg;*.gif;*.webp;*.bmp')
+      if (filePath) {
+        const filename = filePath.split('/').pop() || filePath.split('\\').pop() || 'background.png'
+        const base64Data = await api.readFileBase64(filePath)
+        const savedName = await api.saveBackgroundImage(base64Data, filename)
+        // 刷新列表
+        const list = await api.listBackgroundImages()
+        setImages(list || [])
+        onSelect(savedName)
+      }
+    } catch (e) {
+      console.error('Failed to upload image:', e)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  // 删除图片
+  const handleDelete = async (filename: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      await api.deleteBackgroundImage(filename)
+      if (selected === filename) {
+        onSelect('')
+      }
+      const list = await api.listBackgroundImages()
+      setImages(list || [])
+    } catch (err) {
+      console.error('Failed to delete:', err)
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* 预览区域 */}
+      <div
+        className="w-full h-24 rounded-lg overflow-hidden relative border border-border"
+        style={{ backgroundColor: theme.ui.surface2 }}
+      >
+        {previewUrl ? (
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `url(${previewUrl})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              opacity: opacity / 100,
+              filter: blur > 0 ? `blur(${blur}px)` : undefined,
+            }}
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center text-text-muted text-xs">
+            {loading ? t('sidebar.loading') : t('background.noImage')}
+          </div>
+        )}
+        {/* 当前图片名称 */}
+        {selected && (
+          <div className="absolute bottom-0 left-0 right-0 px-2 py-1 bg-black/50 text-white text-xs truncate">
+            {selected}
+          </div>
+        )}
+      </div>
+
+      {/* 已保存图片列表 */}
+      {images.length > 0 && (
+        <div className="space-y-1">
+          <div className="text-xs text-text-muted">{t('background.savedImages')}</div>
+          <div className="grid grid-cols-4 gap-1">
+            {images.map(img => (
+              <div
+                key={img.name}
+                className={`relative aspect-square rounded overflow-hidden cursor-pointer border-2 transition-all ${
+                  selected === img.name ? 'border-accent' : 'border-transparent hover:border-border'
+                }`}
+                onClick={() => onSelect(img.name)}
+              >
+                <SavedImageThumbnail filename={img.name} />
+                {/* 删除按钮 */}
+                <button
+                  onClick={(e) => handleDelete(img.name, e)}
+                  className="absolute top-0 right-0 p-0.5 bg-black/50 text-white opacity-0 hover:opacity-100 transition-opacity"
+                >
+                  <Trash size={10} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 上传按钮 */}
+      <button
+        type="button"
+        onClick={handleUpload}
+        disabled={uploading}
+        className="w-full btn-secondary text-xs py-2 flex items-center justify-center gap-2"
+      >
+        <Upload size={14} />
+        {uploading ? t('background.uploading') : t('background.uploadNew')}
+      </button>
+
+      {/* 清除按钮 */}
+      {selected && (
+        <button
+          type="button"
+          onClick={() => onSelect('')}
+          className="w-full btn-secondary text-xs py-1.5"
+        >
+          {t('background.reset')}
+        </button>
+      )}
+
+      {/* 透明度和模糊度滑块 */}
+      {selected && (
+        <div className="grid grid-cols-2 gap-3 pt-2">
+          <div>
+            <label className="block text-xs text-text-muted mb-1">{t('session.backgroundOpacity')}</label>
+            <input
+              type="range"
+              value={opacity}
+              onChange={e => onOpacityChange(+e.target.value)}
+              min={10}
+              max={100}
+              className="w-full"
+            />
+            <div className="text-xs text-text-muted text-center">{opacity}%</div>
+          </div>
+          <div>
+            <label className="block text-xs text-text-muted mb-1">{t('session.backgroundBlur')}</label>
+            <input
+              type="range"
+              value={blur}
+              onChange={e => onBlurChange(+e.target.value)}
+              min={0}
+              max={20}
+              className="w-full"
+            />
+            <div className="text-xs text-text-muted text-center">{blur}px</div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// 缩略图组件
+function SavedImageThumbnail({ filename }: { filename: string }) {
+  const [url, setUrl] = useState<string>('')
+  const theme = useSettingsStore.getState().getTheme()
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const base64Data = await api.loadBackgroundImage(filename)
+        const ext = filename.toLowerCase().split('.').pop()
+        const mimeTypes: Record<string, string> = {
+          'png': 'image/png',
+          'jpg': 'image/jpeg',
+          'jpeg': 'image/jpeg',
+          'gif': 'image/gif',
+          'webp': 'image/webp',
+          'bmp': 'image/bmp',
+        }
+        const mimeType = mimeTypes[ext || ''] || 'image/png'
+        setUrl(`data:${mimeType};base64,${base64Data}`)
+      } catch (e) {
+        console.error('Failed to load thumbnail:', e)
+      }
+    }
+    load()
+  }, [filename])
+
+  return (
+    <div
+      className="w-full h-full"
+      style={{
+        backgroundImage: url ? `url(${url})` : undefined,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundColor: theme.ui.surface3,
+      }}
+    />
+  )
+}
 
 interface Props {
   onSelectSession: (id: string) => void
@@ -27,6 +285,7 @@ type SidebarMode = 'always-show' | 'auto-hide'
 export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings, onQuickConnect }: Props) {
   const { sessions, groups, groupsTree, loading, loadSessions, loadGroups, loadGroupsTree, createSession, updateSession, deleteSession, cloneSession, searchSessions, getSessionStatus, confirmDialog } = useSessionStore()
   const { sidebar, setSidebarWidth, setSidebarMode } = useSidebarSettings()
+  const { themes } = useSettingsStore()
   const { t } = useLocale()
 
   const [kw, setKw] = useState('')
@@ -42,7 +301,8 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const [isResizing, setIsResizing] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['ungrouped'])) // 默认展开未分组
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['ungrouped']))
+  const [showCustomSettings, setShowCustomSettings] = useState(false) // 个性化设置面板展开状态
 
   // 多选状态
   const [selectedSessions, setSelectedSessions] = useState<Set<string>>(new Set())
@@ -68,10 +328,36 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
     }
   }, [contextMenu])
 
-  // 键盘快捷键：Ctrl+A 全选，Escape 取消选择
+  // 键盘快捷键：Ctrl+A 全选，Escape 取消选择/关闭对话框
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        // 优先关闭对话框
+        if (show) {
+          e.preventDefault()
+          e.stopPropagation()
+          setShow(false)
+          return
+        }
+        if (showGroups) {
+          e.preventDefault()
+          e.stopPropagation()
+          setShowGroups(false)
+          return
+        }
+        if (showCommands) {
+          e.preventDefault()
+          e.stopPropagation()
+          setShowCommands(false)
+          return
+        }
+        if (showQuickConnect) {
+          e.preventDefault()
+          e.stopPropagation()
+          setShowQuickConnect(false)
+          return
+        }
+        // 其次取消多选状态
         if (selectedSessions.size > 0) {
           clearSelection()
         }
@@ -82,9 +368,9 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
         selectAll()
       }
     }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [selectedSessions, sessions])
+    document.addEventListener('keydown', handleKeyDown, true) // 使用 capture 模式
+    return () => document.removeEventListener('keydown', handleKeyDown, true)
+  }, [selectedSessions, sessions, show, showGroups, showCommands, showQuickConnect])
 
   // 点击外部关闭批量分组菜单
   useEffect(() => {
@@ -128,7 +414,35 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
 
   const handleNew = () => {
     setIsNew(true)
-    setEdit({ name: '', protocol: 'ssh', host: '', port: 22, user: '', authType: 'password', password: '', keyPath: '', group: '', description: '', dataBits: 8, stopBits: 1, parity: 'none' })
+    setEdit({
+      name: '',
+      protocol: 'ssh',
+      host: '',
+      port: 22,
+      user: '',
+      authType: 'password',
+      password: '',
+      keyPath: '',
+      group: '',
+      description: '',
+      dataBits: 8,
+      stopBits: 1,
+      parity: 'none',
+      // 个性化设置默认值
+      useCustomSettings: false,
+      fontSize: 14,
+      fontFamily: '',
+      themeId: '',
+      backgroundOpacity: 50,
+      backgroundBlur: 0,
+      backgroundImage: '',
+      scrollback: 10000,
+      cursorStyle: 'block',
+      cursorBlink: true,
+      lineHeight: 1.2,
+      letterSpacing: 0,
+    })
+    setShowCustomSettings(false)
     setErr('')
     setShow(true)
   }
@@ -136,6 +450,7 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
   const handleEdit = (s: Session) => {
     setIsNew(false)
     setEdit({ ...s })
+    setShowCustomSettings(false)
     setErr('')
     setShow(true)
   }
@@ -762,6 +1077,196 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
                 </select>
               </div>
               <div><label className="block text-sm text-text-secondary mb-1">{t('session.description')}</label><textarea value={edit.description || ''} onChange={e => setEdit({ ...edit, description: e.target.value })} rows={2} className="input-field resize-none" /></div>
+
+              {/* 个性化设置折叠面板 */}
+              <div className="border border-surface-2 rounded-lg mt-4">
+                <div
+                  className="px-3 py-2 flex items-center justify-between cursor-pointer hover:bg-surface-2/50"
+                  onClick={() => setShowCustomSettings(!showCustomSettings)}
+                >
+                  <div className="flex items-center gap-2">
+                    <Sliders size={14} className="text-accent-blue" />
+                    <span className="text-sm font-medium text-text-primary">{t('session.customSettings')}</span>
+                  </div>
+                  <ChevronRight size={14} className={`text-text-muted transition-transform ${showCustomSettings ? 'rotate-90' : ''}`} />
+                </div>
+                {showCustomSettings && (
+                  <div className="px-3 py-3 border-t border-surface-2 space-y-4">
+                    {/* 启用开关 */}
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="useCustomSettings"
+                        checked={edit.useCustomSettings || false}
+                        onChange={e => setEdit({ ...edit, useCustomSettings: e.target.checked })}
+                        className="w-4 h-4"
+                      />
+                      <label htmlFor="useCustomSettings" className="text-sm text-text-secondary cursor-pointer">
+                        {t('session.enableCustomSettings')}
+                      </label>
+                    </div>
+                    <p className="text-xs text-text-muted">{t('session.customSettingsDesc')}</p>
+
+                    {edit.useCustomSettings && (
+                      <>
+                        {/* 字体设置 */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-1 text-xs text-text-secondary font-medium">
+                            <Type size={12} />
+                            {t('session.fontSettings')}
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-xs text-text-muted mb-1">{t('terminal.fontSize')}</label>
+                              <input
+                                type="number"
+                                value={edit.fontSize || 14}
+                                onChange={e => setEdit({ ...edit, fontSize: +e.target.value })}
+                                min={10}
+                                max={32}
+                                className="input-field text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-text-muted mb-1">{t('terminal.fontFamily')}</label>
+                              <input
+                                value={edit.fontFamily || ''}
+                                onChange={e => setEdit({ ...edit, fontFamily: e.target.value })}
+                                placeholder="Monaco, Menlo"
+                                className="input-field text-sm"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 主题设置 */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-1 text-xs text-text-secondary font-medium">
+                            <Server size={12} />
+                            {t('session.themeSettings')}
+                          </div>
+                          <div>
+                            <label className="block text-xs text-text-muted mb-1">{t('theme.selectTheme')}</label>
+                            <select
+                              value={edit.themeId || ''}
+                              onChange={e => setEdit({ ...edit, themeId: e.target.value })}
+                              className="input-field text-sm"
+                            >
+                              <option value="">{t('session.useGlobalSettings')}</option>
+                              {themes.map(theme => (
+                                <option key={theme.id} value={theme.id}>{theme.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* 光标设置 */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-1 text-xs text-text-secondary font-medium">
+                            <Terminal size={12} />
+                            {t('session.cursorSettings')}
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-xs text-text-muted mb-1">{t('session.cursorStyle')}</label>
+                              <select
+                                value={edit.cursorStyle || 'block'}
+                                onChange={e => setEdit({ ...edit, cursorStyle: e.target.value as 'block' | 'underline' | 'bar' })}
+                                className="input-field text-sm"
+                              >
+                                <option value="block">{t('session.cursorStyle.block')}</option>
+                                <option value="underline">{t('session.cursorStyle.underline')}</option>
+                                <option value="bar">{t('session.cursorStyle.bar')}</option>
+                            </select>
+                            </div>
+                            <div className="flex items-center gap-2 pt-4">
+                              <input
+                                type="checkbox"
+                                id="cursorBlink"
+                                checked={edit.cursorBlink ?? true}
+                                onChange={e => setEdit({ ...edit, cursorBlink: e.target.checked })}
+                                className="w-4 h-4"
+                              />
+                              <label htmlFor="cursorBlink" className="text-xs text-text-muted cursor-pointer">
+                                {t('session.cursorBlink')}
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 样式设置 */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-1 text-xs text-text-secondary font-medium">
+                            <Settings size={12} />
+                            {t('session.styleSettings')}
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-xs text-text-muted mb-1">{t('session.lineHeight')}</label>
+                              <input
+                                type="number"
+                                value={edit.lineHeight || 1.2}
+                                onChange={e => setEdit({ ...edit, lineHeight: +e.target.value })}
+                                min={1}
+                                max={2}
+                                step={0.1}
+                                className="input-field text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-text-muted mb-1">{t('session.letterSpacing')}</label>
+                              <input
+                                type="number"
+                                value={edit.letterSpacing || 0}
+                                onChange={e => setEdit({ ...edit, letterSpacing: +e.target.value })}
+                                min={0}
+                                max={10}
+                                step={0.5}
+                                className="input-field text-sm"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 背景设置 */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-1 text-xs text-text-secondary font-medium">
+                            <Image size={12} />
+                            {t('session.backgroundSettings')}
+                          </div>
+                          <BackgroundImageSelector
+                            selected={edit.backgroundImage || ''}
+                            onSelect={(filename) => setEdit({ ...edit, backgroundImage: filename })}
+                            opacity={edit.backgroundOpacity || 50}
+                            blur={edit.backgroundBlur || 0}
+                            onOpacityChange={(value) => setEdit({ ...edit, backgroundOpacity: value })}
+                            onBlurChange={(value) => setEdit({ ...edit, backgroundBlur: value })}
+                          />
+                        </div>
+
+                        {/* 滚动缓冲区设置 */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-1 text-xs text-text-secondary font-medium">
+                            <Terminal size={12} />
+                            {t('session.scrollbackSettings')}
+                          </div>
+                          <div>
+                            <label className="block text-xs text-text-muted mb-1">{t('session.scrollback')}</label>
+                            <input
+                              type="number"
+                              value={edit.scrollback || 10000}
+                              onChange={e => setEdit({ ...edit, scrollback: +e.target.value })}
+                              min={100}
+                              max={50000}
+                              className="input-field text-sm"
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
             <div className="flex justify-end gap-3 mt-6">
               <button onClick={() => setShow(false)} className="btn btn-secondary" disabled={saving}>{t('common.cancel')}</button>

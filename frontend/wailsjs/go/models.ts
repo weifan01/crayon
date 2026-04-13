@@ -391,6 +391,15 @@ export namespace session {
 	    updatedAt: FlexibleTime;
 	    lastUsedAt: FlexibleTime;
 	    tags: string[];
+	    useCustomSettings: boolean;
+	    scrollback: number;
+	    backgroundImage: string;
+	    backgroundOpacity: number;
+	    backgroundBlur: number;
+	    cursorStyle: string;
+	    cursorBlink: boolean;
+	    lineHeight: number;
+	    letterSpacing: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new Session(source);
@@ -428,6 +437,15 @@ export namespace session {
 	        this.updatedAt = this.convertValues(source["updatedAt"], FlexibleTime);
 	        this.lastUsedAt = this.convertValues(source["lastUsedAt"], FlexibleTime);
 	        this.tags = source["tags"];
+	        this.useCustomSettings = source["useCustomSettings"];
+	        this.scrollback = source["scrollback"];
+	        this.backgroundImage = source["backgroundImage"];
+	        this.backgroundOpacity = source["backgroundOpacity"];
+	        this.backgroundBlur = source["backgroundBlur"];
+	        this.cursorStyle = source["cursorStyle"];
+	        this.cursorBlink = source["cursorBlink"];
+	        this.lineHeight = source["lineHeight"];
+	        this.letterSpacing = source["letterSpacing"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

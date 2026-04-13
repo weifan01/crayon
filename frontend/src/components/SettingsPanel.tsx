@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Settings, X, Palette, MousePointer2, Clipboard, Download, Upload, Monitor, Check, Type, ChevronDown, Keyboard, Globe, Columns, Rows, Info, Search, FileText, Shield, AlertCircle, Image, GripHorizontal } from 'lucide-react'
+import { Settings, X, Palette, MousePointer2, Clipboard, Download, Upload, Monitor, Check, Type, ChevronDown, Keyboard, Globe, Columns, Rows, Info, Search, FileText, Shield, AlertCircle, Image, GripHorizontal, Zap, Maximize2 } from 'lucide-react'
 import { useSettingsStore, formatShortcut } from '../stores/settingsStore'
 import { useSessionStore } from '../stores/sessionStore'
 import { useLocale } from '../stores/localeStore'
@@ -26,6 +26,8 @@ const shortcutConfigs = [
   { key: 'splitVertical', icon: Columns },
   { key: 'splitHorizontal', icon: Rows },
   { key: 'closePane', icon: X },
+  { key: 'quickConnect', icon: Zap },
+  { key: 'toggleFullscreen', icon: Maximize2 },
 ]
 
 // 快捷键捕获组件

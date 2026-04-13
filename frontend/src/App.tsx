@@ -14,171 +14,290 @@ import { api } from './api/wails'
 import { Zap } from 'lucide-react'
 import { APP_NAME } from './version'
 
+// 统一的快捷键匹配函数 - 简化版
+function matchShortcut(e: KeyboardEvent, shortcutStr: string): boolean {
+  const parts = shortcutStr.split('+')
+  const key = parts[parts.length - 1]
+
+  // 检查需要的修饰键
+  const needsMeta = parts.includes('Meta')
+  const needsCtrl = parts.includes('Control')
+  const needsShift = parts.includes('Shift')
+  const needsAlt = parts.includes('Alt')
+
+  // 按键匹配（大小写不敏感）
+  if (e.key.toLowerCase() !== key.toLowerCase()) return false
+
+  // Meta 在 Mac 上是 Cmd 键，Windows 上用 Ctrl 键替代
+  // 所以 needsMeta 时：Mac 上需要 e.metaKey，Windows 上需要 e.ctrlKey
+  // needsCtrl 时：只需要 e.ctrlKey（纯 Ctrl 键）
+  if (needsMeta) {
+    // Mac: e.metaKey, Windows: e.ctrlKey
+    if (!(e.metaKey || e.ctrlKey)) return false
+  }
+
+  if (needsCtrl) {
+    if (!e.ctrlKey) return false
+  }
+
+  // 如果快捷键既不需要 Meta 也不需要 Ctrl，确保都没有按下
+  if (!needsMeta && !needsCtrl) {
+    if (e.metaKey || e.ctrlKey) return false
+  }
+
+  // Shift 检查
+  if (needsShift) {
+    if (!e.shiftKey) return false
+  } else {
+    // 不需要 Shift 时，确保没有按下
+    if (e.shiftKey) return false
+  }
+
+  // Alt 检查
+  if (needsAlt) {
+    if (!e.altKey) return false
+  } else {
+    if (e.altKey) return false
+  }
+
+  return true
+}
+
+// 获取分屏树中所有 pane 的 ID
+function getAllPaneIds(node: any): string[] {
+  if (node.type === 'pane') return [node.id]
+  return [...getAllPaneIds(node.children[0]), ...getAllPaneIds(node.children[1])]
+}
+
 function App() {
   const [showSplash, setShowSplash] = useState(true)
   const [showSettings, setShowSettings] = useState(false)
   const [showQuickConnect, setShowQuickConnect] = useState(false)
   const { sessions } = useSessionStore()
-  const { tabs, activeTabId, createTab, setActiveTab, setActivePane, getTab, splitPane, closePane } = useTerminalStore()
-  const { shortcutSettings } = useSettingsStore()
+  const { tabs, activeTabId, createTab, setActiveTab } = useTerminalStore()
   const { t } = useLocale()
   const renderedTabsRef = useRef<Set<string>>(new Set())
+  const appRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => { useSessionStore.getState().loadSessions() }, [])
 
-  // 添加快速连接键盘快捷键 (Cmd+K 或 Ctrl+K)
+  // 启动后设置焦点，确保键盘事件可以正常捕获
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        e.stopPropagation()
-        setShowQuickConnect(true)
+    // 延迟 focus，等待 splash screen 结束
+    const timer = setTimeout(() => {
+      if (appRef.current) {
+        appRef.current.focus()
+        console.log('App container focused')
       }
-    }
-    document.addEventListener('keydown', handleKeyDown, true)
-    return () => document.removeEventListener('keydown', handleKeyDown, true)
-  }, [])
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [showSplash])
 
-  // Cmd+, (Mac) 或 Ctrl+, (Windows) 打开设置
+  // 全局快捷键处理 - 使用 ref 保持稳定引用
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // 检查是否匹配打开设置的快捷键
-      const shortcut = shortcutSettings.openSettings
-      const isMeta = shortcut.includes('Meta')
-      const isCtrl = shortcut.includes('Ctrl')
-      const key = shortcut.split('+').pop() || ''
+    const handleKeyDown = async (e: KeyboardEvent) => {
+      // 调试日志
+      console.log('keydown:', e.key, 'meta:', e.metaKey, 'ctrl:', e.ctrlKey, 'shift:', e.shiftKey)
 
-      const metaPressed = e.metaKey || e.ctrlKey
-      const keyMatch = e.key === key || e.key === key.toLowerCase()
+      // 从 store 获取最新配置和状态
+      const shortcutSettings = useSettingsStore.getState().shortcutSettings
+      const terminalStore = useTerminalStore.getState()
+      const sessionStore = useSessionStore.getState()
 
-      if ((isMeta || isCtrl) && metaPressed && keyMatch) {
+      // 获取事件目标元素信息
+      const target = e.target as HTMLElement
+      const tagName = target.tagName.toLowerCase()
+
+      // ESC 键关闭对话框/面板
+      if (e.key === 'Escape') {
+        // 检查是否有打开的对话框或面板，按优先级关闭
+        if (showSettings) {
+          e.preventDefault()
+          e.stopPropagation()
+          setShowSettings(false)
+          return
+        }
+        if (showQuickConnect) {
+          e.preventDefault()
+          e.stopPropagation()
+          setShowQuickConnect(false)
+          return
+        }
+        // 检查是否有其他对话框（通过 DOM 检查）
+        const modalDialog = document.querySelector('.modal-dialog, [role="dialog"]:not(.settings-panel)')
+        if (modalDialog) {
+          e.preventDefault()
+          e.stopPropagation()
+          return
+        }
+      }
+
+      // 检查是否在设置面板的输入框中（通过 class 检查）
+      if (target.closest('.settings-panel') && (tagName === 'input' || tagName === 'textarea' || target.closest('[role="textbox"]'))) {
+        console.log('ignored: settings input')
+        return
+      }
+
+      // 如果设置面板打开，阻止所有快捷键传递到终端
+      if (document.querySelector('.settings-panel')) {
+        console.log('ignored: settings panel open')
+        return
+      }
+
+      // 忽略在文本输入框中的按键
+      if (tagName === 'input') {
+        const inputType = (target as HTMLInputElement).type || 'text'
+        if (['text', 'password', 'email', 'search', 'url', 'tel', 'number'].includes(inputType)) {
+          console.log('ignored: text input field')
+          return
+        }
+      }
+
+      // textarea 是文本输入，但排除 xterm.js 的 helper textarea（终端使用）
+      if (tagName === 'textarea') {
+        // xterm.js 使用隐藏的 textarea.xterm-helper-textarea 捕获键盘输入
+        if (target.classList.contains('xterm-helper-textarea') || target.closest('.xterm')) {
+          // 在终端中，允许快捷键
+        } else {
+          console.log('ignored: textarea')
+          return
+        }
+      }
+
+      // 打开设置
+      console.log('checking openSettings:', shortcutSettings.openSettings)
+      if (matchShortcut(e, shortcutSettings.openSettings)) {
+        console.log('matched: openSettings')
         e.preventDefault()
         e.stopPropagation()
         setShowSettings(true)
+        return
       }
-    }
-    document.addEventListener('keydown', handleKeyDown, true)
-    return () => document.removeEventListener('keydown', handleKeyDown, true)
-  }, [shortcutSettings.openSettings])
 
-  // Ctrl+Tab 切换标签页
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl+Tab 或 Cmd+Tab (macOS)
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Tab') {
+      // 新建标签页 - 打开快速连接
+      if (matchShortcut(e, shortcutSettings.newTab)) {
         e.preventDefault()
         e.stopPropagation()
-        if (tabs.length > 1) {
-          const currentIndex = tabs.findIndex(t => t.id === activeTabId)
-          // 支持 Ctrl+Shift+Tab 反向切换
-          const direction = e.shiftKey ? -1 : 1
-          const nextIndex = (currentIndex + direction + tabs.length) % tabs.length
-          setActiveTab(tabs[nextIndex].id)
-        }
-      }
-    }
-    // 使用 capture: true 在捕获阶段处理，确保在终端之前拦截
-    document.addEventListener('keydown', handleKeyDown, true)
-    return () => document.removeEventListener('keydown', handleKeyDown, true)
-  }, [tabs, activeTabId, setActiveTab])
-
-  // 分屏快捷键 (iTerm2 风格)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // 从设置中获取快捷键配置
-      const shortcuts = shortcutSettings
-
-      // 解析快捷键字符串
-      const parseShortcut = (shortcut: string) => {
-        const parts = shortcut.split('+')
-        const key = parts[parts.length - 1]
-        const needsShift = parts.includes('Shift')
-        const needsMeta = parts.includes('Meta')
-        const needsCtrl = parts.includes('Control')
-        const needsAlt = parts.includes('Alt')
-        return { key, needsShift, needsMeta, needsCtrl, needsAlt }
+        setShowQuickConnect(true)
+        return
       }
 
-      // 检查快捷键匹配
-      const matchShortcut = (shortcutStr: string) => {
-        const { key, needsShift, needsMeta, needsCtrl, needsAlt } = parseShortcut(shortcutStr)
-        // e.key 可能是大写或小写，统一比较
-        const keyMatch = e.key.toLowerCase() === key.toLowerCase()
-
-        // 检查修饰键
-        // 对于 Mac，Meta 是 Cmd；对于 Windows/Linux，Control 是 Ctrl
-        const metaMatch = needsMeta ? e.metaKey : true
-        const ctrlMatch = needsCtrl ? e.ctrlKey : true
-        const altMatch = needsAlt ? e.altKey : true
-
-        // 对于需要 Shift 的按键（如 Tab），必须按下 Shift
-        // 对于大写字母（如 W），按键本身需要 Shift 来输入，但我们不额外要求 Shift
-        // 这样 Meta+W（关闭标签页）和 Meta+Shift+W（关闭分屏）可以正确区分
-        const isUppercaseLetter = key.length === 1 && key >= 'A' && key <= 'Z'
-        const shiftMatch = isUppercaseLetter
-          ? (needsShift ? e.shiftKey : !e.shiftKey)
-          : (needsShift ? e.shiftKey : true)
-
-        return keyMatch && shiftMatch && metaMatch && ctrlMatch && altMatch
-      }
-
-      // 垂直分屏（左右）- Cmd+D 或 Ctrl+D
-      if (matchShortcut(shortcuts.splitVertical)) {
+      // 关闭标签页
+      if (matchShortcut(e, shortcutSettings.closeTab)) {
         e.preventDefault()
         e.stopPropagation()
-        if (activeTabId) {
-          const tab = getTab(activeTabId)
+        const tabId = terminalStore.activeTabId
+        if (tabId) {
+          const tab = terminalStore.getTab(tabId)
           if (tab) {
-            splitPane(activeTabId, tab.activePaneId, 'horizontal' as SplitDirection)
+            const allPaneIds = getAllPaneIds(tab.rootPane)
+            const connectedPaneIds = allPaneIds.filter(id => sessionStore.getTabStatus(id) === 'connected')
+
+            if (connectedPaneIds.length > 0) {
+              const confirmed = await sessionStore.confirmDialog(t('confirm.closeTab'), t('confirm.closeTabMsg'))
+              if (!confirmed) return
+              for (const paneId of connectedPaneIds) {
+                await sessionStore.disconnectTab(paneId)
+                sessionStore.cleanupTab(paneId)
+              }
+            }
+            terminalStore.closeTab(tabId)
           }
         }
+        return
       }
 
-      // 水平分屏（上下）- Cmd+Shift+D 或 Ctrl+Shift+D
-      if (matchShortcut(shortcuts.splitHorizontal)) {
+      // 切换到下一个标签页
+      if (matchShortcut(e, shortcutSettings.nextTab)) {
         e.preventDefault()
         e.stopPropagation()
-        if (activeTabId) {
-          const tab = getTab(activeTabId)
-          if (tab) {
-            splitPane(activeTabId, tab.activePaneId, 'vertical' as SplitDirection)
-          }
+        if (terminalStore.tabs.length > 1) {
+          const currentIndex = terminalStore.tabs.findIndex(t => t.id === terminalStore.activeTabId)
+          const nextIndex = (currentIndex + 1) % terminalStore.tabs.length
+          terminalStore.setActiveTab(terminalStore.tabs[nextIndex].id)
         }
+        return
       }
 
-      // 关闭当前分屏 - Cmd+Shift+W 或 Ctrl+Shift+W
-      if (matchShortcut(shortcuts.closePane)) {
+      // 切换到上一个标签页
+      if (matchShortcut(e, shortcutSettings.prevTab)) {
         e.preventDefault()
         e.stopPropagation()
-        if (activeTabId) {
-          const tab = getTab(activeTabId)
+        if (terminalStore.tabs.length > 1) {
+          const currentIndex = terminalStore.tabs.findIndex(t => t.id === terminalStore.activeTabId)
+          const prevIndex = (currentIndex - 1 + terminalStore.tabs.length) % terminalStore.tabs.length
+          terminalStore.setActiveTab(terminalStore.tabs[prevIndex].id)
+        }
+        return
+      }
+
+      // 垂直分屏（左右）
+      if (matchShortcut(e, shortcutSettings.splitVertical)) {
+        e.preventDefault()
+        e.stopPropagation()
+        const tabId = terminalStore.activeTabId
+        if (tabId) {
+          const tab = terminalStore.getTab(tabId)
           if (tab) {
-            closePane(activeTabId, tab.activePaneId)
+            terminalStore.splitPane(tabId, tab.activePaneId, 'horizontal' as SplitDirection)
           }
         }
+        return
       }
-    }
-    document.addEventListener('keydown', handleKeyDown, true)
-    return () => document.removeEventListener('keydown', handleKeyDown, true)
-  }, [activeTabId, getTab, splitPane, closePane, shortcutSettings])
 
-  // Cmd+Enter (Mac) 或 Ctrl+Enter (Windows) 切换全屏
-  useEffect(() => {
-    const handleKeyDown = async (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      // 水平分屏（上下）
+      if (matchShortcut(e, shortcutSettings.splitHorizontal)) {
+        e.preventDefault()
+        e.stopPropagation()
+        const tabId = terminalStore.activeTabId
+        if (tabId) {
+          const tab = terminalStore.getTab(tabId)
+          if (tab) {
+            terminalStore.splitPane(tabId, tab.activePaneId, 'vertical' as SplitDirection)
+          }
+        }
+        return
+      }
+
+      // 关闭当前分屏
+      if (matchShortcut(e, shortcutSettings.closePane)) {
+        e.preventDefault()
+        e.stopPropagation()
+        const tabId = terminalStore.activeTabId
+        if (tabId) {
+          const tab = terminalStore.getTab(tabId)
+          if (tab) {
+            terminalStore.closePane(tabId, tab.activePaneId)
+          }
+        }
+        return
+      }
+
+      // 快速连接
+      if (matchShortcut(e, shortcutSettings.quickConnect)) {
+        e.preventDefault()
+        e.stopPropagation()
+        setShowQuickConnect(true)
+        return
+      }
+
+      // 切换全屏
+      if (matchShortcut(e, shortcutSettings.toggleFullscreen)) {
         e.preventDefault()
         e.stopPropagation()
         await api.windowToggleFullscreen()
-        // 全屏切换后延迟触发窗口 resize 事件
         const delays = [50, 100, 200, 400, 600]
         delays.forEach(delay => {
           setTimeout(() => window.dispatchEvent(new Event('resize')), delay)
         })
+        return
       }
     }
+
+    // 使用 capture 模式确保在终端之前拦截
     document.addEventListener('keydown', handleKeyDown, true)
     return () => document.removeEventListener('keydown', handleKeyDown, true)
-  }, [])
+  }, [t, showSettings, showQuickConnect]) // 包含对话框状态用于 ESC 关闭
 
   useEffect(() => {
     const currentTabIds = new Set(tabs.map(t => t.id))
@@ -193,7 +312,6 @@ function App() {
   const handleSelect = async (id: string, forceNew = false) => {
     if (!forceNew) {
       const existingTab = tabs.find(t => {
-        // 检查第一个 pane 的 sessionId
         const firstPane = t.rootPane.type === 'pane' ? t.rootPane : t.rootPane.children[0]
         return firstPane.type === 'pane' && firstPane.sessionId === id
       })
@@ -226,10 +344,9 @@ function App() {
 
   const handlePaneClick = useCallback((tabId: string, paneId: string) => {
     setActiveTab(tabId)
-    setActivePane(tabId, paneId)
-  }, [setActiveTab, setActivePane])
+    useTerminalStore.getState().setActivePane(tabId, paneId)
+  }, [setActiveTab])
 
-  // 使用 ref 缓存每个 tab 的 onPaneClick 回调，确保引用稳定
   const paneClickHandlersRef = useRef<Map<string, (paneId: string) => void>>(new Map())
   const getPaneClickHandler = useCallback((tabId: string) => {
     if (!paneClickHandlersRef.current.has(tabId)) {
@@ -243,7 +360,11 @@ function App() {
   )
 
   return (
-    <div className="flex flex-col h-screen bg-surface-0 text-text-primary">
+    <div
+      ref={appRef}
+      tabIndex={0}
+      className="flex flex-col h-screen bg-surface-0 text-text-primary outline-none"
+    >
       {/* 启动动画 */}
       {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
 
@@ -319,8 +440,8 @@ function App() {
         <QuickConnect
           onClose={() => setShowQuickConnect(false)}
           onConnect={(id) => {
-            setShowQuickConnect(false);
-            handleQuickConnect(id);
+            setShowQuickConnect(false)
+            handleQuickConnect(id)
           }}
         />
       )}

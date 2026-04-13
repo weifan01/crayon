@@ -56,6 +56,16 @@ export interface Session {
   createdAt: string
   updatedAt: string
   lastUsedAt: string
+  // 个性化设置
+  useCustomSettings?: boolean
+  scrollback?: number
+  backgroundImage?: string
+  backgroundOpacity?: number
+  backgroundBlur?: number
+  cursorStyle?: 'block' | 'underline' | 'bar'
+  cursorBlink?: boolean
+  lineHeight?: number
+  letterSpacing?: number
 }
 
 export interface Group {

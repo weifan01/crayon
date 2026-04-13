@@ -100,6 +100,20 @@ func (s *Store) initTables() error {
 	// 添加 Local 协议专用列（如果不存在）
 	s.addColumnIfNotExists("sessions", "local_env", "TEXT DEFAULT '[]'")
 
+	// 添加个性化设置列（如果不存在）
+	s.addColumnIfNotExists("sessions", "use_custom_settings", "INTEGER DEFAULT 0")
+	s.addColumnIfNotExists("sessions", "scrollback", "INTEGER DEFAULT 10000")
+	s.addColumnIfNotExists("sessions", "background_image", "TEXT DEFAULT ''")
+	s.addColumnIfNotExists("sessions", "background_opacity", "INTEGER DEFAULT 50")
+	s.addColumnIfNotExists("sessions", "background_blur", "INTEGER DEFAULT 0")
+	s.addColumnIfNotExists("sessions", "cursor_style", "TEXT DEFAULT 'block'")
+	s.addColumnIfNotExists("sessions", "cursor_blink", "INTEGER DEFAULT 1")
+	s.addColumnIfNotExists("sessions", "line_height", "REAL DEFAULT 1.2")
+	s.addColumnIfNotExists("sessions", "letter_spacing", "REAL DEFAULT 0")
+
+	// 添加 Telnet 协议专用列（如果不存在）
+	s.addColumnIfNotExists("sessions", "no_negotiation", "INTEGER DEFAULT 0")
+
 	return nil
 }
 
@@ -194,7 +208,10 @@ func (s *Store) GetSession(id string) (*Session, error) {
 		SELECT id, name, group_path, description, protocol, host, port, user,
 			auth_type, password, key_path, key_passphrase, keep_alive,
 			proxy_jump, proxy_command, terminal_type, font_size, font_family,
-			theme_id, encoding, login_script, tags, created_at, updated_at, last_used_at, local_env
+			theme_id, encoding, data_bits, stop_bits, parity, no_negotiation,
+			login_script, tags, created_at, updated_at, last_used_at, local_env,
+			use_custom_settings, scrollback, background_image, background_opacity, background_blur,
+			cursor_style, cursor_blink, line_height, letter_spacing
 		FROM sessions WHERE id = ?
 	`, id)
 
@@ -208,8 +225,12 @@ func (s *Store) GetSession(id string) (*Session, error) {
 		&session.AuthType, &session.Password, &session.KeyPath, &session.KeyPassphrase,
 		&session.KeepAlive, &session.ProxyJump, &session.ProxyCommand,
 		&session.TerminalType, &session.FontSize, &session.FontFamily,
-		&session.ThemeID, &session.Encoding, &loginScriptJSON, &tagsJSON,
+		&session.ThemeID, &session.Encoding,
+		&session.DataBits, &session.StopBits, &session.Parity, &session.NoNegotiation,
+		&loginScriptJSON, &tagsJSON,
 		&createdAt, &updatedAt, &lastUsedAt, &localEnvJSON,
+		&session.UseCustomSettings, &session.Scrollback, &session.BackgroundImage, &session.BackgroundOpacity, &session.BackgroundBlur,
+		&session.CursorStyle, &session.CursorBlink, &session.LineHeight, &session.LetterSpacing,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -244,7 +265,10 @@ func (s *Store) ListSessions() ([]*Session, error) {
 		SELECT id, name, group_path, description, protocol, host, port, user,
 			auth_type, password, key_path, key_passphrase, keep_alive,
 			proxy_jump, proxy_command, terminal_type, font_size, font_family,
-			theme_id, encoding, login_script, tags, created_at, updated_at, last_used_at, local_env
+			theme_id, encoding, data_bits, stop_bits, parity, no_negotiation,
+			login_script, tags, created_at, updated_at, last_used_at, local_env,
+			use_custom_settings, scrollback, background_image, background_opacity, background_blur,
+			cursor_style, cursor_blink, line_height, letter_spacing
 		FROM sessions ORDER BY name
 	`)
 	if err != nil {
@@ -261,7 +285,10 @@ func (s *Store) ListSessionsByGroup(group string) ([]*Session, error) {
 		SELECT id, name, group_path, description, protocol, host, port, user,
 			auth_type, password, key_path, key_passphrase, keep_alive,
 			proxy_jump, proxy_command, terminal_type, font_size, font_family,
-			theme_id, encoding, login_script, tags, created_at, updated_at, last_used_at, local_env
+			theme_id, encoding, data_bits, stop_bits, parity, no_negotiation,
+			login_script, tags, created_at, updated_at, last_used_at, local_env,
+			use_custom_settings, scrollback, background_image, background_opacity, background_blur,
+			cursor_style, cursor_blink, line_height, letter_spacing
 		FROM sessions WHERE group_path = ? ORDER BY name
 	`, group)
 	if err != nil {
@@ -278,7 +305,10 @@ func (s *Store) SearchSessions(keyword string) ([]*Session, error) {
 		SELECT id, name, group_path, description, protocol, host, port, user,
 			auth_type, password, key_path, key_passphrase, keep_alive,
 			proxy_jump, proxy_command, terminal_type, font_size, font_family,
-			theme_id, encoding, login_script, tags, created_at, updated_at, last_used_at, local_env
+			theme_id, encoding, data_bits, stop_bits, parity, no_negotiation,
+			login_script, tags, created_at, updated_at, last_used_at, local_env,
+			use_custom_settings, scrollback, background_image, background_opacity, background_blur,
+			cursor_style, cursor_blink, line_height, letter_spacing
 		FROM sessions WHERE name LIKE ? OR host LIKE ? OR description LIKE ?
 		ORDER BY name
 	`,
@@ -306,8 +336,12 @@ func (s *Store) scanSessions(rows *sql.Rows) ([]*Session, error) {
 			&session.AuthType, &session.Password, &session.KeyPath, &session.KeyPassphrase,
 			&session.KeepAlive, &session.ProxyJump, &session.ProxyCommand,
 			&session.TerminalType, &session.FontSize, &session.FontFamily,
-			&session.ThemeID, &session.Encoding, &loginScriptJSON, &tagsJSON,
+			&session.ThemeID, &session.Encoding,
+			&session.DataBits, &session.StopBits, &session.Parity, &session.NoNegotiation,
+			&loginScriptJSON, &tagsJSON,
 			&createdAt, &updatedAt, &lastUsedAt, &localEnvJSON,
+			&session.UseCustomSettings, &session.Scrollback, &session.BackgroundImage, &session.BackgroundOpacity, &session.BackgroundBlur,
+			&session.CursorStyle, &session.CursorBlink, &session.LineHeight, &session.LetterSpacing,
 		)
 		if err != nil {
 			return nil, err
@@ -348,7 +382,9 @@ func (s *Store) UpdateSession(session *Session) error {
 			auth_type = ?, password = ?, key_path = ?, key_passphrase = ?, keep_alive = ?,
 			proxy_jump = ?, proxy_command = ?, terminal_type = ?, font_size = ?,
 			font_family = ?, theme_id = ?, encoding = ?, login_script = ?, tags = ?,
-			local_env = ?, updated_at = ?
+			local_env = ?, updated_at = ?,
+			use_custom_settings = ?, scrollback = ?, background_image = ?, background_opacity = ?, background_blur = ?,
+			cursor_style = ?, cursor_blink = ?, line_height = ?, letter_spacing = ?
 		WHERE id = ?
 	`,
 		session.Name, session.Group, session.Description,
@@ -357,7 +393,10 @@ func (s *Store) UpdateSession(session *Session) error {
 		session.KeepAlive, session.ProxyJump, session.ProxyCommand,
 		session.TerminalType, session.FontSize, session.FontFamily,
 		session.ThemeID, session.Encoding, string(loginScriptJSON), string(tagsJSON),
-		string(localEnvJSON), session.UpdatedAt.Format(time.RFC3339), session.ID,
+		string(localEnvJSON), session.UpdatedAt.Format(time.RFC3339),
+		session.UseCustomSettings, session.Scrollback, session.BackgroundImage, session.BackgroundOpacity, session.BackgroundBlur,
+		session.CursorStyle, session.CursorBlink, session.LineHeight, session.LetterSpacing,
+		session.ID,
 	)
 	return err
 }
