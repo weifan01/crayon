@@ -19,13 +19,18 @@ APP_DISPLAY_NAME := Crayon
 # 资源准备
 # ============================================
 
+# 检测 sed 实现类型（GNU sed vs BSD sed）
+GNU_SED_CHECK := $(shell sed --version 2>/dev/null | grep -q GNU && echo 0 || echo 1)
+ifeq ($(GNU_SED_CHECK),0)
+	SED_INPLACE = sed -i
+else
+	SED_INPLACE = sed -i ''
+endif
+
 .PHONY: update-version
 update-version:
-	@if command -v sed >/dev/null 2>&1; then \
-		sed -i 's/"productVersion": "v[0-9.]*"/"productVersion": "$(VERSION)"/' wails.json; \
-	else \
-		sed -i '' 's/"productVersion": "v[0-9.]*"/"productVersion": "$(VERSION)"/' wails.json; \
-	fi
+	@$(SED_INPLACE) 's/"productVersion": "v[0-9.]*"/"productVersion": "$(VERSION)"/' wails.json
+	@echo "Updated version to $(VERSION)"
 
 .PHONY: prepare-resources
 prepare-resources: update-version

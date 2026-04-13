@@ -124,6 +124,12 @@ func (c *LocalShellConnection) Connect() error {
 	// 设置工作目录
 	if c.workingDir != "" {
 		cmd.Dir = c.workingDir
+	} else {
+		// 默认使用用户家目录
+		homeDir, err := os.UserHomeDir()
+		if err == nil {
+			cmd.Dir = homeDir
+		}
 	}
 
 	// 设置环境变量

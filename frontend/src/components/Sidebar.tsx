@@ -268,11 +268,15 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
 
   const handleSave = async () => {
     if (!edit.name?.trim()) { setErr('请输入名称'); return }
-    if (edit.protocol !== 'serial') {
-      if (!edit.host?.trim()) { setErr('请输入主机'); return }
-      if (edit.protocol === 'ssh' && !edit.user?.trim()) { setErr('请输入用户名'); return }
-    } else {
+    if (edit.protocol === 'serial') {
       if (!edit.host?.trim()) { setErr('请输入串口路径'); return }
+    } else if (edit.protocol === 'ssh') {
+      if (!edit.host?.trim()) { setErr('请输入主机'); return }
+      if (!edit.user?.trim()) { setErr('请输入用户名'); return }
+    } else if (edit.protocol === 'telnet') {
+      if (!edit.host?.trim()) { setErr('请输入主机'); return }
+    } else if (edit.protocol === 'local') {
+      if (!edit.host?.trim()) { setErr(t('quickConnect.errLocalShellRequired')); return }
     }
     setSaving(true)
     setErr('')
@@ -700,7 +704,7 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
                     <div><label className="block text-sm text-text-secondary mb-1">{t('session.parity')}</label><select value={edit.parity || 'none'} onChange={e => setEdit({ ...edit, parity: e.target.value as 'none' | 'even' | 'odd' })} className="input-field"><option value="none">None</option><option value="even">Even</option><option value="odd">Odd</option></select></div>
                   </div>
                 </>
-              ) : (
+              ) : edit.protocol === 'ssh' || edit.protocol === 'telnet' ? (
                 <>
                   <div className="grid grid-cols-3 gap-3"><div className="col-span-2"><label className="block text-sm text-text-secondary mb-1">{t('common.host')} *</label><input value={edit.host || ''} onChange={e => setEdit({ ...edit, host: e.target.value })} className="input-field" /></div><div><label className="block text-sm text-text-secondary mb-1">{t('common.port')}</label><input type="number" value={edit.port || (edit.protocol === 'telnet' ? 23 : 22)} onChange={e => setEdit({ ...edit, port: +e.target.value || (edit.protocol === 'telnet' ? 23 : 22) })} className="input-field" /></div></div>
                   {edit.protocol === 'ssh' && (
@@ -729,6 +733,26 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
                     </>
                   )}
                 </>
+              ) : (
+                // local 协议：显示 Shell 类型和工作目录配置
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm text-text-secondary mb-1">{t('quickConnect.localShell')}</label>
+                    <select value={edit.host || ''} onChange={e => setEdit({ ...edit, host: e.target.value })} className="input-field">
+                      <option value="">{t('quickConnect.selectShell')}</option>
+                      <option value="bash">Bash</option>
+                      <option value="zsh">Zsh</option>
+                      <option value="fish">Fish</option>
+                      <option value="/bin/sh">Sh</option>
+                      <option value="cmd">CMD (Windows)</option>
+                      <option value="powershell">PowerShell (Windows)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-text-secondary mb-1">{t('quickConnect.workingDir')}</label>
+                    <input value={edit.user || ''} onChange={e => setEdit({ ...edit, user: e.target.value })} placeholder={t('quickConnect.workingDirPlaceholder')} className="input-field" />
+                  </div>
+                </div>
               )}
               <div>
                 <label className="block text-sm text-text-secondary mb-1">{t('session.group')}</label>
