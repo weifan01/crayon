@@ -83,6 +83,7 @@ export function ImportDialog({ preview, onConfirm, onClose }: ImportDialogProps)
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
       style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+      onClick={onClose}
     >
       <div
         className="flex flex-col rounded-lg shadow-xl overflow-hidden"
@@ -91,6 +92,7 @@ export function ImportDialog({ preview, onConfirm, onClose }: ImportDialogProps)
           width: '700px',
           maxHeight: '80vh',
         }}
+        onClick={e => e.stopPropagation()}
       >
         {/* 头部 */}
         <div

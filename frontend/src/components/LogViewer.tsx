@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { FolderOpen, FileText, X, Clock, HardDrive, RefreshCw, Search } from 'lucide-react'
+import { FolderOpen, FileText, X, Clock, HardDrive, RefreshCw, Search, ChevronDown, ChevronRight, Filter } from 'lucide-react'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useLocale } from '../stores/localeStore'
 import { api, LogFileInfo } from '../api/wails'
@@ -15,6 +15,8 @@ export function LogViewer({ onClose }: LogViewerProps) {
   const [loading, setLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [logDir, setLogDir] = useState('')
+  const [filenameFilter, setFilenameFilter] = useState('')
+  const [collapsedWeeks, setCollapsedWeeks] = useState<Set<string>>(new Set())
 
   const { getTheme } = useSettingsStore()
   const { t } = useLocale()
@@ -72,8 +74,13 @@ export function LogViewer({ onClose }: LogViewerProps) {
     ? logContent.split('\n').filter(line => line.toLowerCase().includes(searchQuery.toLowerCase())).join('\n')
     : logContent
 
+  // 过滤日志文件（按名称）
+  const filteredLogFiles = filenameFilter
+    ? logFiles.filter(file => file.filename.toLowerCase().includes(filenameFilter.toLowerCase()))
+    : logFiles
+
   // 按周分组日志文件
-  const groupedFiles = logFiles.reduce((acc, file) => {
+  const groupedFiles = filteredLogFiles.reduce((acc, file) => {
     if (!acc[file.weekDir]) {
       acc[file.weekDir] = []
     }
@@ -81,10 +88,36 @@ export function LogViewer({ onClose }: LogViewerProps) {
     return acc
   }, {} as Record<string, LogFileInfo[]>)
 
+  // 切换周目录折叠状态
+  const toggleWeekCollapse = (weekDir: string) => {
+    setCollapsedWeeks(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(weekDir)) {
+        newSet.delete(weekDir)
+      } else {
+        newSet.add(weekDir)
+      }
+      return newSet
+    })
+  }
+
+  // 全部展开/折叠
+  const toggleAllWeeks = () => {
+    const allWeekDirs = Object.keys(groupedFiles)
+    if (collapsedWeeks.size === allWeekDirs.length) {
+      // 全部折叠状态 -> 全部展开
+      setCollapsedWeeks(new Set())
+    } else {
+      // 全部展开
+      setCollapsedWeeks(new Set(allWeekDirs))
+    }
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
       style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+      onClick={onClose}
     >
       <div
         className="flex flex-col rounded-lg shadow-xl overflow-hidden"
@@ -94,6 +127,7 @@ export function LogViewer({ onClose }: LogViewerProps) {
           maxWidth: '1200px',
           height: '85vh',
         }}
+        onClick={e => e.stopPropagation()}
       >
         {/* 头部 */}
         <div
@@ -144,57 +178,126 @@ export function LogViewer({ onClose }: LogViewerProps) {
               backgroundColor: theme.ui.surface1,
             }}
           >
-            {Object.keys(groupedFiles).sort().reverse().map(weekDir => (
-              <div key={weekDir}>
-                <div
-                  className="px-4 py-2 text-sm font-medium"
-                  style={{
-                    backgroundColor: theme.ui.surface2,
-                    color: theme.ui.textMuted,
-                    borderBottom: `1px solid ${theme.ui.border}`,
-                  }}
+            {/* 文件名过滤 */}
+            <div
+              className="px-3 py-2 flex items-center gap-2"
+              style={{
+                backgroundColor: theme.ui.surface2,
+                borderBottom: `1px solid ${theme.ui.border}`,
+              }}
+            >
+              <Filter size={14} style={{ color: theme.ui.textMuted }} />
+              <input
+                type="text"
+                value={filenameFilter}
+                onChange={(e) => setFilenameFilter(e.target.value)}
+                placeholder={t('logs.filenameFilter')}
+                className="flex-1 px-2 py-1 text-sm outline-none rounded"
+                style={{
+                  backgroundColor: theme.ui.surface1,
+                  color: theme.ui.textPrimary,
+                  border: `1px solid ${theme.ui.border}`,
+                }}
+              />
+              {filenameFilter && (
+                <button
+                  onClick={() => setFilenameFilter('')}
+                  className="p-1 rounded hover:bg-white/10"
+                  style={{ color: theme.ui.textMuted }}
                 >
-                  <FolderOpen size={14} className="inline mr-2" />
-                  {weekDir}
-                </div>
-                {groupedFiles[weekDir].map(file => (
-                  <button
-                    key={file.fullPath}
-                    onClick={() => loadLogFile(file.fullPath)}
-                    className="w-full px-4 py-2 flex items-center gap-2 text-left transition-colors"
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+
+            {/* 全部展开/折叠按钮 */}
+            <div
+              className="px-3 py-1 flex items-center justify-between"
+              style={{
+                backgroundColor: theme.ui.surface2,
+                borderBottom: `1px solid ${theme.ui.border}`,
+              }}
+            >
+              <span className="text-xs" style={{ color: theme.ui.textMuted }}>
+                {filteredLogFiles.length} {t('logs.files')}
+              </span>
+              <button
+                onClick={toggleAllWeeks}
+                className="text-xs px-2 py-1 rounded hover:bg-white/10"
+                style={{ color: theme.ui.textMuted }}
+              >
+                {collapsedWeeks.size === Object.keys(groupedFiles).length
+                  ? t('logs.expandAll')
+                  : t('logs.collapseAll')}
+              </button>
+            </div>
+
+            {Object.keys(groupedFiles).sort().reverse().map(weekDir => {
+              const isCollapsed = collapsedWeeks.has(weekDir)
+              const fileCount = groupedFiles[weekDir].length
+              return (
+                <div key={weekDir}>
+                  <div
+                    className="px-4 py-2 text-sm font-medium flex items-center justify-between cursor-pointer hover:bg-white/5"
                     style={{
-                      backgroundColor: selectedFile === file.fullPath
-                        ? theme.ui.accent + '20'
-                        : 'transparent',
-                      color: theme.ui.textPrimary,
+                      backgroundColor: theme.ui.surface2,
+                      color: theme.ui.textMuted,
                       borderBottom: `1px solid ${theme.ui.border}`,
                     }}
+                    onClick={() => toggleWeekCollapse(weekDir)}
                   >
-                    <FileText size={14} style={{ color: theme.ui.textMuted }} />
-                    <div className="flex-1 truncate">
-                      <div className="text-sm truncate">{file.filename}</div>
-                      <div
-                        className="text-xs flex items-center gap-2 mt-1"
-                        style={{ color: theme.ui.textMuted }}
-                      >
-                        <Clock size={12} />
-                        <span>{formatDate(file.modifiedTime)}</span>
-                        <HardDrive size={12} />
-                        <span>{formatFileSize(file.size)}</span>
-                      </div>
+                    <div className="flex items-center gap-2">
+                      {isCollapsed ? (
+                        <ChevronRight size={14} />
+                      ) : (
+                        <ChevronDown size={14} />
+                      )}
+                      <FolderOpen size={14} />
+                      <span>{weekDir}</span>
                     </div>
-                  </button>
-                ))}
-              </div>
-            ))}
+                    <span className="text-xs" style={{ color: theme.ui.textMuted }}>
+                      {fileCount}
+                    </span>
+                  </div>
+                  {!isCollapsed && groupedFiles[weekDir].map(file => (
+                    <button
+                      key={file.fullPath}
+                      onClick={() => loadLogFile(file.fullPath)}
+                      className="w-full px-4 py-2 flex items-center gap-2 text-left transition-colors"
+                      style={{
+                        backgroundColor: selectedFile === file.fullPath
+                          ? theme.ui.accent + '20'
+                          : 'transparent',
+                        color: theme.ui.textPrimary,
+                        borderBottom: `1px solid ${theme.ui.border}`,
+                      }}
+                    >
+                      <FileText size={14} style={{ color: theme.ui.textMuted }} />
+                      <div className="flex-1 truncate">
+                        <div className="text-sm truncate">{file.filename}</div>
+                        <div
+                          className="text-xs flex items-center gap-2 mt-1"
+                          style={{ color: theme.ui.textMuted }}
+                        >
+                          <Clock size={12} />
+                          <span>{formatDate(file.modifiedTime)}</span>
+                          <HardDrive size={12} />
+                          <span>{formatFileSize(file.size)}</span>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )
+            })}
 
-            {logFiles.length === 0 && (
+            {filteredLogFiles.length === 0 && (
               <div
                 className="flex flex-col items-center justify-center py-12"
                 style={{ color: theme.ui.textMuted }}
               >
                 <FileText size={48} className="mb-4 opacity-50" />
-                <span>{t('logs.noLogs')}</span>
+                <span>{filenameFilter ? t('logs.noMatch') : t('logs.noLogs')}</span>
               </div>
             )}
           </div>

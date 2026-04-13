@@ -380,6 +380,11 @@ const zh: Record<string, string> = {
   'logs.noResults': '无匹配内容',
   'logs.weekDir': '周目录',
   'logs.openLogViewer': '查看日志',
+  'logs.filenameFilter': '过滤文件名...',
+  'logs.files': '个文件',
+  'logs.expandAll': '全部展开',
+  'logs.collapseAll': '全部折叠',
+  'logs.noMatch': '无匹配文件',
 }
 
 // 英文翻译
@@ -753,6 +758,11 @@ const en: Record<string, string> = {
   'logs.noResults': 'No matches',
   'logs.weekDir': 'Week Directory',
   'logs.openLogViewer': 'View Logs',
+  'logs.filenameFilter': 'Filter filename...',
+  'logs.files': 'files',
+  'logs.expandAll': 'Expand All',
+  'logs.collapseAll': 'Collapse All',
+  'logs.noMatch': 'No matching files',
 }
 
 const translations: Record<Language, Record<string, string>> = { zh, en }

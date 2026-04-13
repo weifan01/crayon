@@ -228,7 +228,7 @@ export function GroupManager({ onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm" onClick={onClose}>
       <div
         className="bg-surface-1 border border-surface-2/50 rounded-2xl w-[480px] shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
         onClick={e => e.stopPropagation()}

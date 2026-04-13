@@ -85,7 +85,7 @@ export function QuickConnect({ onClose, onConnect }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
       <div className="bg-surface-1 border border-surface-2 rounded-lg w-[450px]" onClick={e => e.stopPropagation()}>
         <div className="p-4 border-b border-surface-2 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-text-primary flex items-center gap-2">
