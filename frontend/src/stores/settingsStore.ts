@@ -41,12 +41,17 @@ interface SettingsState {
   terminalSettings: TerminalSettings
   shortcutSettings: ShortcutSettings
   backgroundSettings: BackgroundSettings
-  themes: AppTheme[]  // 新增：所有可用主题列表
+  themes: AppTheme[]  // 所有可用主题列表（预设+自定义）
+  customThemes: AppTheme[]  // 自定义主题列表
   getTheme: () => AppTheme
-  getThemeById: (themeId: string) => AppTheme | undefined  // 新增：按 ID 获取主题
+  getThemeById: (themeId: string) => AppTheme | undefined
   getTerminalTheme: () => TerminalTheme
-  getTerminalThemeById: (themeId: string) => TerminalTheme | undefined  // 新增：按 ID 获取终端主题
+  getTerminalThemeById: (themeId: string) => TerminalTheme | undefined
+  isCustomTheme: (themeId: string) => boolean  // 判断是否为自定义主题
   setTheme: (themeId: string) => void
+  createCustomTheme: (theme: AppTheme) => void  // 创建自定义主题
+  updateCustomTheme: (theme: AppTheme) => void  // 更新自定义主题
+  deleteCustomTheme: (themeId: string) => void  // 删除自定义主题
   setTerminalSettings: (settings: Partial<TerminalSettings>) => void
   setShortcutSettings: (settings: Partial<ShortcutSettings>) => void
   setBackgroundSettings: (settings: Partial<BackgroundSettings>) => void
@@ -174,6 +179,33 @@ const saveBackgroundSettings = (settings: BackgroundSettings) => {
   }
 }
 
+// 加载自定义主题
+const loadCustomThemes = (): AppTheme[] => {
+  try {
+    const saved = localStorage.getItem('custom-themes')
+    if (saved) {
+      return JSON.parse(saved)
+    }
+  } catch (e) {
+    console.error('Failed to load custom themes:', e)
+  }
+  return []
+}
+
+// 保存自定义主题
+const saveCustomThemes = (themes: AppTheme[]) => {
+  try {
+    localStorage.setItem('custom-themes', JSON.stringify(themes))
+  } catch (e) {
+    console.error('Failed to save custom themes:', e)
+  }
+}
+
+// 判断是否为预设主题
+const isPresetTheme = (themeId: string): boolean => {
+  return appThemes.some(t => t.id === themeId)
+}
+
 // 应用背景 CSS
 const applyBackgroundCss = async (settings: BackgroundSettings) => {
   const root = document.documentElement
@@ -262,7 +294,9 @@ const applyUIFont = (fontFamily: string) => {
 
 // 初始化时应用保存的主题
 const savedThemeId = localStorage.getItem('terminal-theme') || 'starry-night'
-const initialTheme = appThemes.find(t => t.id === savedThemeId) || appThemes[0]
+const initialCustomThemes = loadCustomThemes()
+const allThemes = [...appThemes, ...initialCustomThemes]
+const initialTheme = allThemes.find(t => t.id === savedThemeId) || appThemes[0]
 const initialSettings = loadTerminalSettings()
 const initialShortcuts = loadShortcutSettings()
 const initialBackgroundSettings = loadBackgroundSettings()
@@ -287,34 +321,85 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   terminalSettings: initialSettings,
   shortcutSettings: initialShortcuts,
   backgroundSettings: initialBackgroundSettings,
-  themes: appThemes,  // 导出所有主题
+  themes: allThemes,
+  customThemes: initialCustomThemes,
 
   getTheme: () => {
     const themeId = get().currentTheme
-    return appThemes.find(t => t.id === themeId) || appThemes[0]
+    const allThemes = [...appThemes, ...get().customThemes]
+    return allThemes.find(t => t.id === themeId) || appThemes[0]
   },
 
   getThemeById: (themeId: string) => {
-    return appThemes.find(t => t.id === themeId)
+    const allThemes = [...appThemes, ...get().customThemes]
+    return allThemes.find(t => t.id === themeId)
   },
 
   getTerminalTheme: () => {
     const themeId = get().currentTheme
-    const theme = appThemes.find(t => t.id === themeId) || appThemes[0]
+    const allThemes = [...appThemes, ...get().customThemes]
+    const theme = allThemes.find(t => t.id === themeId) || appThemes[0]
     return toTerminalTheme(theme)
   },
 
   getTerminalThemeById: (themeId: string) => {
-    const theme = appThemes.find(t => t.id === themeId)
+    const allThemes = [...appThemes, ...get().customThemes]
+    const theme = allThemes.find(t => t.id === themeId)
     return theme ? toTerminalTheme(theme) : undefined
+  },
+
+  isCustomTheme: (themeId: string) => {
+    return !isPresetTheme(themeId)
   },
 
   setTheme: (themeId: string) => {
     localStorage.setItem('terminal-theme', themeId)
     set({ currentTheme: themeId })
     // 应用主题
-    const theme = appThemes.find(t => t.id === themeId) || appThemes[0]
+    const allThemes = [...appThemes, ...get().customThemes]
+    const theme = allThemes.find(t => t.id === themeId) || appThemes[0]
     applyCssVariables(theme)
+  },
+
+  createCustomTheme: (theme: AppTheme) => {
+    const newCustomThemes = [...get().customThemes, theme]
+    saveCustomThemes(newCustomThemes)
+    set({
+      customThemes: newCustomThemes,
+      themes: [...appThemes, ...newCustomThemes],
+      currentTheme: theme.id,  // 同时更新当前主题
+    })
+    // 立即应用新主题
+    localStorage.setItem('terminal-theme', theme.id)
+    applyCssVariables(theme)
+  },
+
+  updateCustomTheme: (theme: AppTheme) => {
+    const newCustomThemes = get().customThemes.map(t =>
+      t.id === theme.id ? theme : t
+    )
+    saveCustomThemes(newCustomThemes)
+    set({
+      customThemes: newCustomThemes,
+      themes: [...appThemes, ...newCustomThemes]
+    })
+    // 如果当前正在使用此主题，立即应用更新
+    if (get().currentTheme === theme.id) {
+      applyCssVariables(theme)
+    }
+  },
+
+  deleteCustomTheme: (themeId: string) => {
+    const newCustomThemes = get().customThemes.filter(t => t.id !== themeId)
+    saveCustomThemes(newCustomThemes)
+    set({
+      customThemes: newCustomThemes,
+      themes: [...appThemes, ...newCustomThemes]
+    })
+    // 如果删除的是当前使用的主题，切换回默认主题
+    if (get().currentTheme === themeId) {
+      get().setTheme('starry-night')
+    }
   },
 
   setTerminalSettings: (settings: Partial<TerminalSettings>) => {

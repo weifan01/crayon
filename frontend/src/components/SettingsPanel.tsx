@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Settings, X, Palette, MousePointer2, Clipboard, Download, Upload, Monitor, Check, Type, ChevronDown, Keyboard, Globe, Columns, Rows, Info, Search, FileText, Shield, AlertCircle, Image, GripHorizontal, Zap, Maximize2, Plus, Edit2, Trash2, ChevronRight, Sliders, Server, Terminal, CheckSquare, FileCheck } from 'lucide-react'
+import { Settings, X, Palette, MousePointer2, Clipboard, Download, Upload, Monitor, Check, Type, ChevronDown, Keyboard, Globe, Columns, Rows, Info, Search, FileText, Shield, AlertCircle, Image, GripHorizontal, Zap, Maximize2, Plus, Edit2, Trash2, ChevronRight, Sliders, Server, Terminal, CheckSquare, FileCheck, Copy } from 'lucide-react'
 import { useSettingsStore, formatShortcut, terminalFonts } from '../stores/settingsStore'
 import { useSessionStore } from '../stores/sessionStore'
 import { useLocale } from '../stores/localeStore'
@@ -116,12 +116,16 @@ function ShortcutRecorder({
 }
 
 export function SettingsPanel({ onClose }: Props) {
-  const { terminalSettings, setTerminalSettings, shortcutSettings, setShortcutSettings, currentTheme, setTheme, getTheme } = useSettingsStore()
-  const { exportConfigWithOptions, previewImport, importConfigWithOptions } = useSessionStore()
+  const { terminalSettings, setTerminalSettings, shortcutSettings, setShortcutSettings, currentTheme, setTheme, getTheme, themes, customThemes, isCustomTheme, createCustomTheme, updateCustomTheme, deleteCustomTheme } = useSettingsStore()
+  const { exportConfigWithOptions, previewImport, importConfigWithOptions, confirmDialog } = useSessionStore()
   const { language, setLanguage, t } = useLocale()
   const [activeTab, setActiveTab] = useState<TabId>('terminal')
   const [previewTheme, setPreviewTheme] = useState<AppTheme | null>(null)
   const [showTerminalFontDropdown, setShowTerminalFontDropdown] = useState(false)
+  // 主题编辑对话框状态
+  const [showThemeEditor, setShowThemeEditor] = useState(false)
+  const [editingTheme, setEditingTheme] = useState<AppTheme | null>(null)
+  const [isNewTheme, setIsNewTheme] = useState(false)
   const [showUIFontDropdown, setShowUIFontDropdown] = useState(false)
   const [showLogs, setShowLogs] = useState(false)
   const [showExportDialog, setShowExportDialog] = useState(false)
@@ -289,6 +293,47 @@ export function SettingsPanel({ onClose }: Props) {
       console.error('Failed to load templates:', e)
       setTemplates([])
     }
+  }
+
+  // 主题编辑处理函数
+  const handleCopyTheme = (sourceTheme: AppTheme) => {
+    const newId = `custom-${sourceTheme.id}-${Date.now()}`
+    const newTheme: AppTheme = {
+      ...sourceTheme,
+      id: newId,
+      name: `${sourceTheme.name} (${t('theme.copy')})`,
+      author: 'User',
+      description: `${t('theme.copySuccess')}: ${sourceTheme.name}`,
+    }
+    createCustomTheme(newTheme)  // createCustomTheme 已经会自动应用主题
+  }
+
+  const handleEditTheme = (theme: AppTheme) => {
+    setIsNewTheme(false)
+    setEditingTheme({ ...theme })
+    setShowThemeEditor(true)
+  }
+
+  const handleDeleteTheme = async (themeId: string) => {
+    const confirmed = await confirmDialog(t('theme.confirmDelete'), '')
+    if (confirmed) {
+      deleteCustomTheme(themeId)
+    }
+  }
+
+  const handleSaveTheme = () => {
+    if (!editingTheme) return
+    if (!editingTheme.name.trim()) {
+      alert(t('common.nameRequired'))
+      return
+    }
+    if (isNewTheme) {
+      createCustomTheme(editingTheme)
+    } else {
+      updateCustomTheme(editingTheme)
+    }
+    setShowThemeEditor(false)
+    setEditingTheme(null)
   }
 
   const handleNewTemplate = () => {
@@ -906,28 +951,69 @@ export function SettingsPanel({ onClose }: Props) {
                 </h3>
 
                 <div className="grid grid-cols-2 gap-3 mb-6">
-                  {appThemes.map(t => {
-                    const isSelected = currentTheme === t.id
+                  {themes.map(th => {
+                    const isSelected = currentTheme === th.id
+                    const isCustom = isCustomTheme(th.id)
                     return (
                       <div
-                        key={t.id}
+                        key={th.id}
                         className={`p-3 rounded-xl cursor-pointer transition-all duration-150 border-2 ${isSelected ? 'ring-2 ring-offset-2' : ''}`}
                         style={{
-                          backgroundColor: t.ui.surface1,
-                          borderColor: isSelected ? t.ui.accent : t.ui.border,
-                          '--tw-ring-color': t.ui.accent,
+                          backgroundColor: th.ui.surface1,
+                          borderColor: isSelected ? th.ui.accent : th.ui.border,
+                          '--tw-ring-color': th.ui.accent,
                           '--tw-ring-offset-color': theme.ui.surface0,
                         } as React.CSSProperties}
-                        onClick={() => setTheme(t.id)}
-                        onMouseEnter={() => setPreviewTheme(t)}
+                        onClick={() => setTheme(th.id)}
+                        onMouseEnter={() => setPreviewTheme(th)}
                         onMouseLeave={() => setPreviewTheme(null)}
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium" style={{ color: t.ui.textPrimary }}>{t.name}</span>
-                          {isSelected && <Check size={14} style={{ color: t.ui.accent }} />}
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium" style={{ color: th.ui.textPrimary }}>{th.name}</span>
+                            {isCustom && (
+                              <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: th.ui.accent + '20', color: th.ui.accent }}>
+                                {t('theme.customTheme')}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {isSelected && <Check size={14} style={{ color: th.ui.accent }} />}
+                            {/* 复制按钮 - 所有主题都可以复制 */}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleCopyTheme(th) }}
+                              className="p-1 rounded opacity-60 hover:opacity-100"
+                              style={{ color: th.ui.textMuted }}
+                              title={t('theme.copy')}
+                            >
+                              <Copy size={14} />
+                            </button>
+                            {/* 编辑按钮 - 仅自定义主题 */}
+                            {isCustom && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleEditTheme(th) }}
+                                className="p-1 rounded opacity-60 hover:opacity-100"
+                                style={{ color: th.ui.textMuted }}
+                                title={t('theme.edit')}
+                              >
+                                <Edit2 size={14} />
+                              </button>
+                            )}
+                            {/* 删除按钮 - 仅自定义主题 */}
+                            {isCustom && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleDeleteTheme(th.id) }}
+                                className="p-1 rounded opacity-60 hover:opacity-100 hover:text-red-400"
+                                style={{ color: th.ui.textMuted }}
+                                title={t('theme.delete')}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            )}
+                          </div>
                         </div>
                         <div className="flex gap-1">
-                          {[t.terminal.background, t.terminal.red, t.terminal.green, t.terminal.yellow, t.terminal.blue, t.terminal.magenta, t.terminal.cyan, t.terminal.white].map((color, idx) => (
+                          {[th.terminal.background, th.terminal.red, th.terminal.green, th.terminal.yellow, th.terminal.blue, th.terminal.magenta, th.terminal.cyan, th.terminal.white].map((color, idx) => (
                             <div key={idx} className="w-3 h-4 rounded" style={{ backgroundColor: color }} />
                           ))}
                         </div>
@@ -976,6 +1062,162 @@ export function SettingsPanel({ onClose }: Props) {
                     <span style={{ color: displayTheme.terminal.blue }}>Documents</span>
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* 主题编辑对话框 */}
+          {showThemeEditor && editingTheme && (
+            <div
+              className="dialog-panel flex flex-col"
+              style={{
+                position: 'fixed',
+                left: (window.innerWidth - 600) / 2,
+                top: 80,
+                width: 600,
+                maxHeight: '85vh',
+                zIndex: 1001,
+              }}
+            >
+              <div className="p-4 border-b border-surface-2 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-text-primary flex items-center gap-2">
+                  <Palette size={20} />
+                  {isNewTheme ? t('theme.newTheme') : t('theme.editTheme')}
+                </h3>
+                <button onClick={() => setShowThemeEditor(false)} className="p-1 hover:bg-surface-2 rounded text-text-muted" style={{ cursor: 'pointer' }}>
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="p-4 overflow-y-auto flex-1">
+                {/* 基本信息 */}
+                <div className="mb-4 space-y-3">
+                  <div>
+                    <label className="block text-sm text-text-secondary mb-1">{t('theme.themeName')} *</label>
+                    <input
+                      value={editingTheme.name}
+                      onChange={(e) => setEditingTheme({ ...editingTheme, name: e.target.value })}
+                      className="input-field"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-text-secondary mb-1">{t('theme.themeDescription')}</label>
+                    <input
+                      value={editingTheme.description}
+                      onChange={(e) => setEditingTheme({ ...editingTheme, description: e.target.value })}
+                      className="input-field"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-text-secondary mb-1">{t('theme.author')}</label>
+                    <input
+                      value={editingTheme.author}
+                      onChange={(e) => setEditingTheme({ ...editingTheme, author: e.target.value })}
+                      className="input-field"
+                    />
+                  </div>
+                </div>
+
+                {/* 终端颜色 */}
+                <div className="mb-4">
+                  <h4 className="text-sm font-medium text-text-secondary mb-2">{t('theme.terminalColors')}</h4>
+                  <div className="grid grid-cols-4 gap-3">
+                    {[
+                      { key: 'background', label: t('theme.background') },
+                      { key: 'foreground', label: t('theme.foreground') },
+                      { key: 'cursor', label: t('theme.cursor') },
+                      { key: 'selectionBackground', label: t('theme.selection') },
+                      { key: 'black', label: 'Black' },
+                      { key: 'red', label: 'Red' },
+                      { key: 'green', label: 'Green' },
+                      { key: 'yellow', label: 'Yellow' },
+                      { key: 'blue', label: 'Blue' },
+                      { key: 'magenta', label: 'Magenta' },
+                      { key: 'cyan', label: 'Cyan' },
+                      { key: 'white', label: 'White' },
+                      { key: 'brightBlack', label: 'Bright Black' },
+                      { key: 'brightRed', label: 'Bright Red' },
+                      { key: 'brightGreen', label: 'Bright Green' },
+                      { key: 'brightYellow', label: 'Bright Yellow' },
+                      { key: 'brightBlue', label: 'Bright Blue' },
+                      { key: 'brightMagenta', label: 'Bright Magenta' },
+                      { key: 'brightCyan', label: 'Bright Cyan' },
+                      { key: 'brightWhite', label: 'Bright White' },
+                    ].map(({ key, label }) => (
+                      <div key={key}>
+                        <label className="block text-xs text-text-muted mb-1">{label}</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={editingTheme.terminal[key as keyof typeof editingTheme.terminal]}
+                            onChange={(e) => setEditingTheme({
+                              ...editingTheme,
+                              terminal: { ...editingTheme.terminal, [key]: e.target.value }
+                            })}
+                            className="w-8 h-8 rounded cursor-pointer"
+                          />
+                          <input
+                            value={editingTheme.terminal[key as keyof typeof editingTheme.terminal]}
+                            onChange={(e) => setEditingTheme({
+                              ...editingTheme,
+                              terminal: { ...editingTheme.terminal, [key]: e.target.value }
+                            })}
+                            className="input-field text-xs flex-1"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* UI颜色 */}
+                <div className="mb-4">
+                  <h4 className="text-sm font-medium text-text-secondary mb-2">{t('theme.uiColors')}</h4>
+                  <div className="grid grid-cols-4 gap-3">
+                    {[
+                      { key: 'surface0', label: 'Surface 0' },
+                      { key: 'surface1', label: 'Surface 1' },
+                      { key: 'surface2', label: 'Surface 2' },
+                      { key: 'surface3', label: 'Surface 3' },
+                      { key: 'textPrimary', label: 'Text Primary' },
+                      { key: 'textSecondary', label: 'Text Secondary' },
+                      { key: 'textMuted', label: 'Text Muted' },
+                      { key: 'accent', label: 'Accent' },
+                      { key: 'accentHover', label: 'Accent Hover' },
+                      { key: 'success', label: 'Success' },
+                      { key: 'warning', label: 'Warning' },
+                      { key: 'error', label: 'Error' },
+                      { key: 'info', label: 'Info' },
+                      { key: 'border', label: 'Border' },
+                    ].map(({ key, label }) => (
+                      <div key={key}>
+                        <label className="block text-xs text-text-muted mb-1">{label}</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={editingTheme.ui[key as 'surface0' | 'surface1' | 'surface2' | 'surface3' | 'textPrimary' | 'textSecondary' | 'textMuted' | 'accent' | 'accentHover' | 'success' | 'warning' | 'error' | 'info' | 'border']}
+                            onChange={(e) => setEditingTheme({
+                              ...editingTheme,
+                              ui: { ...editingTheme.ui, [key]: e.target.value }
+                            })}
+                            className="w-8 h-8 rounded cursor-pointer"
+                          />
+                          <input
+                            value={editingTheme.ui[key as 'surface0' | 'surface1' | 'surface2' | 'surface3' | 'textPrimary' | 'textSecondary' | 'textMuted' | 'accent' | 'accentHover' | 'success' | 'warning' | 'error' | 'info' | 'border']}
+                            onChange={(e) => setEditingTheme({
+                              ...editingTheme,
+                              ui: { ...editingTheme.ui, [key]: e.target.value }
+                            })}
+                            className="input-field text-xs flex-1"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="p-4 border-t border-surface-2 flex justify-end gap-3">
+                <button onClick={() => setShowThemeEditor(false)} className="btn btn-secondary">{t('common.cancel')}</button>
+                <button onClick={handleSaveTheme} className="btn btn-primary">{t('common.save')}</button>
               </div>
             </div>
           )}
@@ -1190,7 +1432,7 @@ export function SettingsPanel({ onClose }: Props) {
                           <span className="font-medium" style={{ color: theme.ui.textPrimary }}>{t('session.themeSettings')}</span>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
-                          {appThemes.map(th => (
+                          {themes.map(th => (
                             <button
                               key={th.id}
                               onClick={() => setEditTemplate({ ...editTemplate, themeId: th.id })}
