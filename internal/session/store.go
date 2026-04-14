@@ -9,6 +9,16 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+// sessionSelectFields 会话查询的 SELECT 字段列表（统一使用，避免重复）
+const sessionSelectFields = `
+	id, name, group_path, description, protocol, host, port, user,
+	auth_type, password, key_path, key_passphrase, keep_alive,
+	proxy_jump, proxy_command, terminal_type, font_size, font_family,
+	theme_id, encoding, data_bits, stop_bits, parity, no_negotiation,
+	login_script, tags, created_at, updated_at, last_used_at, local_env,
+	use_custom_settings, template_id, scrollback, background_image, background_opacity, background_blur,
+	cursor_style, cursor_blink, line_height, letter_spacing`
+
 // Store 会话存储
 type Store struct {
 	db *sql.DB
@@ -232,13 +242,7 @@ func (s *Store) CreateSession(session *Session) error {
 // GetSession 获取会话
 func (s *Store) GetSession(id string) (*Session, error) {
 	row := s.db.QueryRow(`
-		SELECT id, name, group_path, description, protocol, host, port, user,
-			auth_type, password, key_path, key_passphrase, keep_alive,
-			proxy_jump, proxy_command, terminal_type, font_size, font_family,
-			theme_id, encoding, data_bits, stop_bits, parity, no_negotiation,
-			login_script, tags, created_at, updated_at, last_used_at, local_env,
-			use_custom_settings, template_id, scrollback, background_image, background_opacity, background_blur,
-			cursor_style, cursor_blink, line_height, letter_spacing
+		SELECT ` + sessionSelectFields + `
 		FROM sessions WHERE id = ?
 	`, id)
 
@@ -293,13 +297,7 @@ func (s *Store) GetSession(id string) (*Session, error) {
 // ListSessions 列出所有会话
 func (s *Store) ListSessions() ([]*Session, error) {
 	rows, err := s.db.Query(`
-		SELECT id, name, group_path, description, protocol, host, port, user,
-			auth_type, password, key_path, key_passphrase, keep_alive,
-			proxy_jump, proxy_command, terminal_type, font_size, font_family,
-			theme_id, encoding, data_bits, stop_bits, parity, no_negotiation,
-			login_script, tags, created_at, updated_at, last_used_at, local_env,
-			use_custom_settings, template_id, scrollback, background_image, background_opacity, background_blur,
-			cursor_style, cursor_blink, line_height, letter_spacing
+		SELECT ` + sessionSelectFields + `
 		FROM sessions ORDER BY name
 	`)
 	if err != nil {
@@ -313,13 +311,7 @@ func (s *Store) ListSessions() ([]*Session, error) {
 // ListSessionsByGroup 按分组列出会话
 func (s *Store) ListSessionsByGroup(group string) ([]*Session, error) {
 	rows, err := s.db.Query(`
-		SELECT id, name, group_path, description, protocol, host, port, user,
-			auth_type, password, key_path, key_passphrase, keep_alive,
-			proxy_jump, proxy_command, terminal_type, font_size, font_family,
-			theme_id, encoding, data_bits, stop_bits, parity, no_negotiation,
-			login_script, tags, created_at, updated_at, last_used_at, local_env,
-			use_custom_settings, template_id, scrollback, background_image, background_opacity, background_blur,
-			cursor_style, cursor_blink, line_height, letter_spacing
+		SELECT ` + sessionSelectFields + `
 		FROM sessions WHERE group_path = ? ORDER BY name
 	`, group)
 	if err != nil {
@@ -333,13 +325,7 @@ func (s *Store) ListSessionsByGroup(group string) ([]*Session, error) {
 // SearchSessions 搜索会话
 func (s *Store) SearchSessions(keyword string) ([]*Session, error) {
 	rows, err := s.db.Query(`
-		SELECT id, name, group_path, description, protocol, host, port, user,
-			auth_type, password, key_path, key_passphrase, keep_alive,
-			proxy_jump, proxy_command, terminal_type, font_size, font_family,
-			theme_id, encoding, data_bits, stop_bits, parity, no_negotiation,
-			login_script, tags, created_at, updated_at, last_used_at, local_env,
-			use_custom_settings, template_id, scrollback, background_image, background_opacity, background_blur,
-			cursor_style, cursor_blink, line_height, letter_spacing
+		SELECT ` + sessionSelectFields + `
 		FROM sessions WHERE name LIKE ? OR host LIKE ? OR description LIKE ?
 		ORDER BY name
 	`,
