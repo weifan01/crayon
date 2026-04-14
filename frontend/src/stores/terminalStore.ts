@@ -12,7 +12,7 @@ export type PaneNode =
   | { type: 'split'; id: string; direction: SplitDirection; children: [PaneNode, PaneNode]; ratio: number }
 
 // 标签页
-interface Tab {
+export interface Tab {
   id: string
   rootPane: PaneNode  // 根分屏节点（可以是单个 pane 或 split）
   activePaneId: string // 当前活动的 pane ID

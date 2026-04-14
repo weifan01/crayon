@@ -4,6 +4,7 @@ import { useTerminalStore } from '../stores/terminalStore'
 import { useLocale } from '../stores/localeStore'
 import { api } from '../api/wails'
 import { Terminal, Plus, Play, Edit3, Trash2, X, ChevronDown, ChevronRight } from 'lucide-react'
+import { getFirstPane, getAllPaneIds } from '../utils/paneUtils'
 
 interface Props {
   onClose: () => void
@@ -46,18 +47,6 @@ export function CommandPanel({ onClose }: Props) {
     ;(a[g] = a[g] || []).push(c)
     return a
   }, {})
-
-  // 获取分屏树的第一个 pane
-  const getFirstPane = (node: any): any => {
-    if (node.type === 'pane') return node
-    return getFirstPane(node.children[0])
-  }
-
-  // 获取所有 pane 的 ID
-  const getAllPaneIds = (node: any): string[] => {
-    if (node.type === 'pane') return [node.id]
-    return [...getAllPaneIds(node.children[0]), ...getAllPaneIds(node.children[1])]
-  }
 
   // 获取已连接的标签页（带会话信息）
   const connectedTabs = tabs.flatMap(tab => {

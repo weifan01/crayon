@@ -4,6 +4,7 @@ import { useSettingsStore } from '../stores/settingsStore'
 import { useLocale } from '../stores/localeStore'
 import { api, BackgroundFileInfo } from '../api/wails'
 import { SliderInput } from './ui'
+import { getImageMimeType } from '../utils/paneUtils'
 
 // 背景图片选择器（带预览）
 export function BackgroundImageSelector({
@@ -54,16 +55,7 @@ export function BackgroundImageSelector({
     const loadPreview = async () => {
       try {
         const base64Data = await api.loadBackgroundImage(selected)
-        const ext = selected.toLowerCase().split('.').pop()
-        const mimeTypes: Record<string, string> = {
-          'png': 'image/png',
-          'jpg': 'image/jpeg',
-          'jpeg': 'image/jpeg',
-          'gif': 'image/gif',
-          'webp': 'image/webp',
-          'bmp': 'image/bmp',
-        }
-        const mimeType = mimeTypes[ext || ''] || 'image/png'
+        const mimeType = getImageMimeType(selected)
         setPreviewUrl(`data:${mimeType};base64,${base64Data}`)
       } catch (e) {
         console.error('Failed to load preview:', e)
@@ -227,16 +219,7 @@ function SavedImageThumbnail({ filename }: { filename: string }) {
     const load = async () => {
       try {
         const base64Data = await api.loadBackgroundImage(filename)
-        const ext = filename.toLowerCase().split('.').pop()
-        const mimeTypes: Record<string, string> = {
-          'png': 'image/png',
-          'jpg': 'image/jpeg',
-          'jpeg': 'image/jpeg',
-          'gif': 'image/gif',
-          'webp': 'image/webp',
-          'bmp': 'image/bmp',
-        }
-        const mimeType = mimeTypes[ext || ''] || 'image/png'
+        const mimeType = getImageMimeType(filename)
         setUrl(`data:${mimeType};base64,${base64Data}`)
       } catch (e) {
         console.error('Failed to load thumbnail:', e)

@@ -4,6 +4,7 @@ import { useSettingsStore } from '../stores/settingsStore'
 import { useLocale } from '../stores/localeStore'
 import { api, BackgroundFileInfo } from '../api/wails'
 import { SliderInput, ToggleSwitch, SegmentedControl } from './ui'
+import { getImageMimeType } from '../utils/paneUtils'
 
 export function BackgroundSettingsPanel() {
   const { backgroundSettings, setBackgroundSettings, applyBackground, resetBackground } = useSettingsStore()
@@ -55,16 +56,7 @@ export function BackgroundSettingsPanel() {
   const loadPreviewImage = async (filename: string) => {
     try {
       const base64Data = await api.loadBackgroundImage(filename)
-      const ext = filename.toLowerCase().split('.').pop()
-      const mimeTypes: Record<string, string> = {
-        'png': 'image/png',
-        'jpg': 'image/jpeg',
-        'jpeg': 'image/jpeg',
-        'gif': 'image/gif',
-        'webp': 'image/webp',
-        'bmp': 'image/bmp',
-      }
-      const mimeType = mimeTypes[ext || ''] || 'image/png'
+      const mimeType = getImageMimeType(filename)
       setPreviewUrl(`data:${mimeType};base64,${base64Data}`)
     } catch (e) {
       console.error('Failed to load preview image:', e)
@@ -87,16 +79,7 @@ export function BackgroundSettingsPanel() {
         imagePath: savedPath,
       })
 
-      const ext = filename.toLowerCase().split('.').pop()
-      const mimeTypes: Record<string, string> = {
-        'png': 'image/png',
-        'jpg': 'image/jpeg',
-        'jpeg': 'image/jpeg',
-        'gif': 'image/gif',
-        'webp': 'image/webp',
-        'bmp': 'image/bmp',
-      }
-      const mimeType = mimeTypes[ext || ''] || 'image/png'
+      const mimeType = getImageMimeType(filename)
       setPreviewUrl(`data:${mimeType};base64,${base64Data}`)
 
       await applyBackground()
@@ -162,16 +145,7 @@ export function BackgroundSettingsPanel() {
   const getThumbnailUrl = async (filename: string): Promise<string> => {
     try {
       const base64Data = await api.loadBackgroundImage(filename)
-      const ext = filename.toLowerCase().split('.').pop()
-      const mimeTypes: Record<string, string> = {
-        'png': 'image/png',
-        'jpg': 'image/jpeg',
-        'jpeg': 'image/jpeg',
-        'gif': 'image/gif',
-        'webp': 'image/webp',
-        'bmp': 'image/bmp',
-      }
-      const mimeType = mimeTypes[ext || ''] || 'image/png'
+      const mimeType = getImageMimeType(filename)
       return `data:${mimeType};base64,${base64Data}`
     } catch {
       return ''

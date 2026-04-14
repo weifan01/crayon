@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { appThemes, AppTheme, themeToCssVariables, toTerminalTheme, TerminalTheme } from '../components/themes'
 import { api, BackgroundSettings } from '../api/wails'
+import { getImageMimeType } from '../utils/paneUtils'
 
 interface TerminalSettings {
   copyOnSelect: boolean      // 选中即复制
@@ -198,16 +199,7 @@ const applyBackgroundCss = async (settings: BackgroundSettings) => {
     try {
       const base64Data = await api.loadBackgroundImage(settings.imagePath)
       // 根据文件扩展名确定 MIME 类型
-      const ext = settings.imagePath.toLowerCase().split('.').pop()
-      const mimeTypes: Record<string, string> = {
-        'png': 'image/png',
-        'jpg': 'image/jpeg',
-        'jpeg': 'image/jpeg',
-        'gif': 'image/gif',
-        'webp': 'image/webp',
-        'bmp': 'image/bmp',
-      }
-      const mimeType = mimeTypes[ext || ''] || 'image/png'
+      const mimeType = getImageMimeType(settings.imagePath)
       imageUrl = `data:${mimeType};base64,${base64Data}`
     } catch (e) {
       console.error('Failed to load background image:', e)

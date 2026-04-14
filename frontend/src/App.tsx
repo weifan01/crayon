@@ -105,9 +105,6 @@ function App() {
   // 全局快捷键处理 - 使用 ref 保持稳定引用
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
-      // 调试日志
-      console.log('keydown:', e.key, 'meta:', e.metaKey, 'ctrl:', e.ctrlKey, 'shift:', e.shiftKey)
-
       // 从 store 获取最新配置和状态
       const shortcutSettings = useSettingsStore.getState().shortcutSettings
       const terminalStore = useTerminalStore.getState()
@@ -143,13 +140,11 @@ function App() {
 
       // 检查是否在设置面板的输入框中（通过 class 检查）
       if (target.closest('.settings-panel') && (tagName === 'input' || tagName === 'textarea' || target.closest('[role="textbox"]'))) {
-        console.log('ignored: settings input')
         return
       }
 
       // 如果设置面板打开，阻止所有快捷键传递到终端
       if (document.querySelector('.settings-panel')) {
-        console.log('ignored: settings panel open')
         return
       }
 
@@ -157,7 +152,6 @@ function App() {
       if (tagName === 'input') {
         const inputType = (target as HTMLInputElement).type || 'text'
         if (['text', 'password', 'email', 'search', 'url', 'tel', 'number'].includes(inputType)) {
-          console.log('ignored: text input field')
           return
         }
       }
@@ -168,15 +162,12 @@ function App() {
         if (target.classList.contains('xterm-helper-textarea') || target.closest('.xterm')) {
           // 在终端中，允许快捷键
         } else {
-          console.log('ignored: textarea')
           return
         }
       }
 
       // 打开设置
-      console.log('checking openSettings:', shortcutSettings.openSettings)
       if (matchShortcut(e, shortcutSettings.openSettings)) {
-        console.log('matched: openSettings')
         e.preventDefault()
         e.stopPropagation()
         setShowSettings(true)

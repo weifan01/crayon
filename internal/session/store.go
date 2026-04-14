@@ -220,7 +220,7 @@ func (s *Store) CreateSession(session *Session) error {
 	`,
 		session.ID, session.Name, session.Group, session.Description,
 		string(session.Protocol), session.Host, session.Port, session.User,
-		string(session.AuthType), session.Password, session.KeyPath, session.KeyPassphrase,
+		string(session.AuthType), Encrypt(session.Password), session.KeyPath, Encrypt(session.KeyPassphrase),
 		session.KeepAlive, session.ProxyJump, session.ProxyCommand,
 		session.TerminalType, session.FontSize, session.FontFamily,
 		session.ThemeID, session.Encoding, string(loginScriptJSON), string(tagsJSON),
@@ -282,6 +282,10 @@ func (s *Store) GetSession(id string) (*Session, error) {
 	json.Unmarshal([]byte(loginScriptJSON), &session.LoginScript)
 	json.Unmarshal([]byte(tagsJSON), &session.Tags)
 	json.Unmarshal([]byte(localEnvJSON), &session.LocalEnv)
+
+	// 解密敏感字段
+	session.Password = Decrypt(session.Password)
+	session.KeyPassphrase = Decrypt(session.KeyPassphrase)
 
 	return session, nil
 }
@@ -391,6 +395,10 @@ func (s *Store) scanSessions(rows *sql.Rows) ([]*Session, error) {
 		json.Unmarshal([]byte(tagsJSON), &session.Tags)
 		json.Unmarshal([]byte(localEnvJSON), &session.LocalEnv)
 
+		// 解密敏感字段
+		session.Password = Decrypt(session.Password)
+		session.KeyPassphrase = Decrypt(session.KeyPassphrase)
+
 		sessions = append(sessions, session)
 	}
 	return sessions, nil
@@ -416,7 +424,7 @@ func (s *Store) UpdateSession(session *Session) error {
 	`,
 		session.Name, session.Group, session.Description,
 		session.Host, session.Port, session.User,
-		string(session.AuthType), session.Password, session.KeyPath, session.KeyPassphrase,
+		string(session.AuthType), Encrypt(session.Password), session.KeyPath, Encrypt(session.KeyPassphrase),
 		session.KeepAlive, session.ProxyJump, session.ProxyCommand,
 		session.TerminalType, session.FontSize, session.FontFamily,
 		session.ThemeID, session.Encoding, string(loginScriptJSON), string(tagsJSON),

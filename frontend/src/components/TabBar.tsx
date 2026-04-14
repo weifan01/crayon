@@ -1,20 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useSessionStore } from '../stores/sessionStore'
-import { useTerminalStore, SplitDirection } from '../stores/terminalStore'
+import { useTerminalStore, SplitDirection, Tab } from '../stores/terminalStore'
 import { useLocale } from '../stores/localeStore'
 import { X, Copy, Columns, Rows } from 'lucide-react'
-
-// 获取分屏树的第一个 pane（用于获取标签页基本信息）
-function getFirstPane(node: any): any {
-  if (node.type === 'pane') return node
-  return getFirstPane(node.children[0])
-}
-
-// 获取分屏树中所有 pane 的 ID
-function getAllPaneIds(node: any): string[] {
-  if (node.type === 'pane') return [node.id]
-  return [...getAllPaneIds(node.children[0]), ...getAllPaneIds(node.children[1])]
-}
+import { getFirstPane, getAllPaneIds } from '../utils/paneUtils'
 
 interface Props {
   onCloneTab: (sessionId: string) => void
@@ -50,7 +39,7 @@ export function TabBar({ onCloneTab }: Props) {
   }
 
   // 关闭标签页
-  const handleCloseTab = async (e: React.MouseEvent, tab: any) => {
+  const handleCloseTab = async (e: React.MouseEvent, tab: Tab) => {
     e.stopPropagation()
     e.preventDefault()
 

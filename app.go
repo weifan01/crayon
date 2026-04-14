@@ -58,6 +58,12 @@ func (a *App) startup(ctx context.Context) {
 		return
 	}
 
+	// 初始化加密模块
+	if err := session.InitEncryption(a.configDir); err != nil {
+		fmt.Println("Failed to initialize encryption:", err)
+		return
+	}
+
 	// 初始化存储
 	dbPath := filepath.Join(a.configDir, "crayon.db")
 	a.sessionStore, err = session.NewStore(dbPath)
@@ -398,30 +404,6 @@ func splitFilters(filters string) []runtime.FileFilter {
 	}
 
 	return result
-}
-
-func splitBySemicolon(s string) []string {
-	var result []string
-	start := 0
-	for i := 0; i < len(s); i++ {
-		if s[i] == ';' {
-			result = append(result, s[start:i])
-			start = i + 1
-		}
-	}
-	if start < len(s) {
-		result = append(result, s[start:])
-	}
-	return result
-}
-
-func splitByColon(s string) (string, string) {
-	for i := 0; i < len(s); i++ {
-		if s[i] == ':' {
-			return s[:i], s[i+1:]
-		}
-	}
-	return s, ""
 }
 
 // Session 相关方法
