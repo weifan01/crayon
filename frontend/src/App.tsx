@@ -29,11 +29,17 @@ function matchShortcut(e: KeyboardEvent, shortcutStr: string): boolean {
   if (e.key.toLowerCase() !== key.toLowerCase()) return false
 
   // Meta 在 Mac 上是 Cmd 键，Windows 上用 Ctrl 键替代
-  // 所以 needsMeta 时：Mac 上需要 e.metaKey，Windows 上需要 e.ctrlKey
-  // needsCtrl 时：只需要 e.ctrlKey（纯 Ctrl 键）
+  // Mac 上必须用 Cmd (metaKey)，不能接受 Ctrl (ctrlKey)
+  const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
+
   if (needsMeta) {
-    // Mac: e.metaKey, Windows: e.ctrlKey
-    if (!(e.metaKey || e.ctrlKey)) return false
+    if (isMac) {
+      // Mac: 只接受 metaKey (Cmd)
+      if (!e.metaKey) return false
+    } else {
+      // Windows/Linux: 接受 ctrlKey
+      if (!e.ctrlKey) return false
+    }
   }
 
   if (needsCtrl) {
@@ -171,14 +177,6 @@ function App() {
         e.preventDefault()
         e.stopPropagation()
         setShowSettings(true)
-        return
-      }
-
-      // 新建标签页 - 打开快速连接
-      if (matchShortcut(e, shortcutSettings.newTab)) {
-        e.preventDefault()
-        e.stopPropagation()
-        setShowQuickConnect(true)
         return
       }
 

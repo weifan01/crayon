@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Settings, X, Palette, MousePointer2, Clipboard, Download, Upload, Monitor, Check, Type, ChevronDown, Keyboard, Globe, Columns, Rows, Info, Search, FileText, Shield, AlertCircle, Image, GripHorizontal, Zap, Maximize2, Plus, Edit2, Trash2, ChevronRight, Sliders, Server, Terminal, CheckSquare, FileCheck, Folder } from 'lucide-react'
+import { Settings, X, Palette, MousePointer2, Clipboard, Download, Upload, Monitor, Check, Type, ChevronDown, Keyboard, Globe, Columns, Rows, Info, Search, FileText, Shield, AlertCircle, Image, GripHorizontal, Zap, Maximize2, Plus, Edit2, Trash2, ChevronRight, Sliders, Server, Terminal, CheckSquare, FileCheck } from 'lucide-react'
 import { useSettingsStore, formatShortcut, terminalFonts } from '../stores/settingsStore'
 import { useSessionStore } from '../stores/sessionStore'
 import { useLocale } from '../stores/localeStore'
@@ -24,7 +24,6 @@ type TabId = 'terminal' | 'theme' | 'background' | 'templates' | 'shortcuts' | '
 // 快捷键配置项
 const shortcutConfigs = [
   { key: 'openSettings', icon: Settings },
-  { key: 'newTab', icon: Monitor },
   { key: 'closeTab', icon: X },
   { key: 'nextTab', icon: Palette, labelKey: 'shortcuts.switchTab' },
   { key: 'splitVertical', icon: Columns },
@@ -66,13 +65,16 @@ function ShortcutRecorder({
 
       // 获取按键（排除修饰键）
       const key = e.key
-      if (key !== 'Meta' && key !== 'Control' && key !== 'Shift' && key !== 'Alt') {
+      const isModifier = key === 'Meta' || key === 'Control' || key === 'Shift' || key === 'Alt'
+
+      if (!isModifier) {
         // 单个字符统一大写，特殊键保持原样（如 Tab, Enter）
         parts.push(key.length === 1 ? key.toUpperCase() : key)
       }
 
-      // 至少需要一个修饰键和一个普通键
-      if (parts.length >= 2) {
+      // 必须包含至少一个修饰键和一个普通键才能完成录入
+      // 这样可以支持多修饰键组合（如 Control+Shift+Tab）
+      if (parts.length >= 2 && !isModifier) {
         const shortcutStr = parts.join('+')
         onChange(shortcutStr)
         setIsRecording(false)

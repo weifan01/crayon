@@ -15,7 +15,6 @@ interface TerminalSettings {
 // 快捷键配置
 interface ShortcutSettings {
   openSettings: string       // 打开设置
-  newTab: string            // 新建标签页
   closeTab: string          // 关闭标签页
   nextTab: string           // 下一个标签页
   prevTab: string           // 上一个标签页
@@ -60,13 +59,12 @@ interface SettingsState {
 // 默认快捷键（iTerm2 风格）
 const defaultShortcuts: ShortcutSettings = {
   openSettings: 'Meta+,',      // Mac: Cmd+,, Windows: Ctrl+,
-  newTab: 'Meta+T',           // Mac: Cmd+T, Windows: Ctrl+T
-  closeTab: 'Meta+W',         // Mac: Cmd+W, Windows: Ctrl+W
+  closeTab: 'Meta+E',         // Mac: Cmd+E, Windows: Ctrl+E
   nextTab: 'Control+Tab',     // Ctrl+Tab 切换到下一个
   prevTab: 'Control+Shift+Tab', // Ctrl+Shift+Tab 切换到上一个
   splitVertical: 'Meta+D',        // Mac: Cmd+D 垂直分屏（左右）
   splitHorizontal: 'Meta+Shift+D', // Mac: Cmd+Shift+D 水平分屏（上下）
-  closePane: 'Meta+Shift+W',     // Mac: Cmd+Shift+W 关闭当前分屏
+  closePane: 'Meta+W',        // Mac: Cmd+W, Windows: Ctrl+W
   quickConnect: 'Meta+K',        // Mac: Cmd+K 快速连接
   toggleFullscreen: 'Meta+Enter', // Mac: Cmd+Enter 切换全屏
 }
