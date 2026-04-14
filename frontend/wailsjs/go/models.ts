@@ -360,6 +360,68 @@ export namespace session {
 		    return a;
 		}
 	}
+	export class PersonalizationTemplate {
+	    id: string;
+	    name: string;
+	    description: string;
+	    createdAt: FlexibleTime;
+	    updatedAt: FlexibleTime;
+	    useCustomSettings: boolean;
+	    fontSize: number;
+	    fontFamily: string;
+	    themeId: string;
+	    scrollback: number;
+	    backgroundImage: string;
+	    backgroundOpacity: number;
+	    backgroundBlur: number;
+	    cursorStyle: string;
+	    cursorBlink: boolean;
+	    lineHeight: number;
+	    letterSpacing: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new PersonalizationTemplate(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.description = source["description"];
+	        this.createdAt = this.convertValues(source["createdAt"], FlexibleTime);
+	        this.updatedAt = this.convertValues(source["updatedAt"], FlexibleTime);
+	        this.useCustomSettings = source["useCustomSettings"];
+	        this.fontSize = source["fontSize"];
+	        this.fontFamily = source["fontFamily"];
+	        this.themeId = source["themeId"];
+	        this.scrollback = source["scrollback"];
+	        this.backgroundImage = source["backgroundImage"];
+	        this.backgroundOpacity = source["backgroundOpacity"];
+	        this.backgroundBlur = source["backgroundBlur"];
+	        this.cursorStyle = source["cursorStyle"];
+	        this.cursorBlink = source["cursorBlink"];
+	        this.lineHeight = source["lineHeight"];
+	        this.letterSpacing = source["letterSpacing"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class Session {
 	    id: string;
 	    name: string;
@@ -392,6 +454,7 @@ export namespace session {
 	    lastUsedAt: FlexibleTime;
 	    tags: string[];
 	    useCustomSettings: boolean;
+	    templateId: string;
 	    scrollback: number;
 	    backgroundImage: string;
 	    backgroundOpacity: number;
@@ -438,6 +501,7 @@ export namespace session {
 	        this.lastUsedAt = this.convertValues(source["lastUsedAt"], FlexibleTime);
 	        this.tags = source["tags"];
 	        this.useCustomSettings = source["useCustomSettings"];
+	        this.templateId = source["templateId"];
 	        this.scrollback = source["scrollback"];
 	        this.backgroundImage = source["backgroundImage"];
 	        this.backgroundOpacity = source["backgroundOpacity"];

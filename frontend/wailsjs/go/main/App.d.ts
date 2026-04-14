@@ -6,6 +6,8 @@ import {version} from '../models';
 import {logger} from '../models';
 import {main} from '../models';
 
+export function ApplyTemplateToSessions(arg1:string,arg2:Array<string>):Promise<void>;
+
 export function ClipboardRead():Promise<string>;
 
 export function ClipboardWrite(arg1:string):Promise<void>;
@@ -26,6 +28,8 @@ export function CreateGroup(arg1:string,arg2:string):Promise<session.Group>;
 
 export function CreateSession(arg1:session.Session):Promise<void>;
 
+export function CreateTemplate(arg1:session.PersonalizationTemplate):Promise<void>;
+
 export function DeleteBackgroundImage(arg1:string):Promise<void>;
 
 export function DeleteCommand(arg1:string):Promise<void>;
@@ -33,6 +37,8 @@ export function DeleteCommand(arg1:string):Promise<void>;
 export function DeleteGroup(arg1:string):Promise<void>;
 
 export function DeleteSession(arg1:string):Promise<void>;
+
+export function DeleteTemplate(arg1:string):Promise<void>;
 
 export function DisconnectSession(arg1:string):Promise<void>;
 
@@ -66,6 +72,8 @@ export function GetSessionStatus(arg1:string):Promise<string>;
 
 export function GetTabStatus(arg1:string):Promise<string>;
 
+export function GetTemplate(arg1:string):Promise<session.PersonalizationTemplate>;
+
 export function ImportConfig(arg1:string):Promise<void>;
 
 export function ImportConfigWithOptions(arg1:string,arg2:main.ImportOptions):Promise<void>;
@@ -81,6 +89,8 @@ export function ListGroups():Promise<Array<session.Group>>;
 export function ListGroupsTree():Promise<Array<session.GroupNode>>;
 
 export function ListSessions():Promise<Array<session.Session>>;
+
+export function ListTemplates():Promise<Array<session.PersonalizationTemplate>>;
 
 export function LoadBackgroundImage(arg1:string):Promise<string>;
 
@@ -131,6 +141,8 @@ export function UpdateCommand(arg1:command.Command):Promise<void>;
 export function UpdateGroup(arg1:string,arg2:string,arg3:string):Promise<session.Group>;
 
 export function UpdateSession(arg1:session.Session):Promise<void>;
+
+export function UpdateTemplate(arg1:session.PersonalizationTemplate):Promise<void>;
 
 export function WindowClose():Promise<void>;
 

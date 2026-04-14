@@ -461,7 +461,39 @@ func (a *App) SearchSessions(keyword string) ([]*session.Session, error) {
 	return a.sessionStore.SearchSessions(keyword)
 }
 
-// Group 相关方法
+// ========== 个性化模板管理 ==========
+
+// ListTemplates 列出所有个性化模板
+func (a *App) ListTemplates() ([]*session.PersonalizationTemplate, error) {
+	return a.sessionStore.ListTemplates()
+}
+
+// GetTemplate 获取单个模板
+func (a *App) GetTemplate(id string) (*session.PersonalizationTemplate, error) {
+	return a.sessionStore.GetTemplate(id)
+}
+
+// CreateTemplate 创建模板
+func (a *App) CreateTemplate(t *session.PersonalizationTemplate) error {
+	return a.sessionStore.CreateTemplate(t)
+}
+
+// UpdateTemplate 更新模板
+func (a *App) UpdateTemplate(t *session.PersonalizationTemplate) error {
+	return a.sessionStore.UpdateTemplate(t)
+}
+
+// DeleteTemplate 删除模板
+func (a *App) DeleteTemplate(id string) error {
+	return a.sessionStore.DeleteTemplate(id)
+}
+
+// ApplyTemplateToSessions 将模板应用到多个会话
+func (a *App) ApplyTemplateToSessions(templateID string, sessionIDs []string) error {
+	return a.sessionStore.ApplyTemplateToSessions(templateID, sessionIDs)
+}
+
+// ========== Group 相关方法 ==========
 
 // ListGroups 列出所有分组
 func (a *App) ListGroups() ([]*session.Group, error) {

@@ -103,6 +103,7 @@ type Session struct {
 	Tags        []string     `json:"tags"`
 	// 个性化设置
 	UseCustomSettings bool    `json:"useCustomSettings"` // 启用个性化设置
+	TemplateID        string  `json:"templateId"`        // 关联的模板 ID
 	Scrollback        int     `json:"scrollback"`        // 滚动缓冲区行数
 	// 背景设置
 	BackgroundImage   string `json:"backgroundImage"`   // 背景图片路径

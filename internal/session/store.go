@@ -102,6 +102,7 @@ func (s *Store) initTables() error {
 
 	// 添加个性化设置列（如果不存在）
 	s.addColumnIfNotExists("sessions", "use_custom_settings", "INTEGER DEFAULT 0")
+	s.addColumnIfNotExists("sessions", "template_id", "TEXT DEFAULT ''")
 	s.addColumnIfNotExists("sessions", "scrollback", "INTEGER DEFAULT 10000")
 	s.addColumnIfNotExists("sessions", "background_image", "TEXT DEFAULT ''")
 	s.addColumnIfNotExists("sessions", "background_opacity", "INTEGER DEFAULT 50")
@@ -113,6 +114,32 @@ func (s *Store) initTables() error {
 
 	// 添加 Telnet 协议专用列（如果不存在）
 	s.addColumnIfNotExists("sessions", "no_negotiation", "INTEGER DEFAULT 0")
+
+	// 创建个性化模板表
+	_, err = s.db.Exec(`
+		CREATE TABLE IF NOT EXISTS personalization_templates (
+			id TEXT PRIMARY KEY,
+			name TEXT NOT NULL,
+			description TEXT DEFAULT '',
+			use_custom_settings INTEGER DEFAULT 1,
+			font_size INTEGER DEFAULT 14,
+			font_family TEXT DEFAULT '',
+			theme_id TEXT DEFAULT '',
+			scrollback INTEGER DEFAULT 10000,
+			background_image TEXT DEFAULT '',
+			background_opacity INTEGER DEFAULT 50,
+			background_blur INTEGER DEFAULT 0,
+			cursor_style TEXT DEFAULT 'block',
+			cursor_blink INTEGER DEFAULT 1,
+			line_height REAL DEFAULT 1.2,
+			letter_spacing REAL DEFAULT 0,
+			created_at TEXT NOT NULL,
+			updated_at TEXT NOT NULL
+		)
+	`)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -210,7 +237,7 @@ func (s *Store) GetSession(id string) (*Session, error) {
 			proxy_jump, proxy_command, terminal_type, font_size, font_family,
 			theme_id, encoding, data_bits, stop_bits, parity, no_negotiation,
 			login_script, tags, created_at, updated_at, last_used_at, local_env,
-			use_custom_settings, scrollback, background_image, background_opacity, background_blur,
+			use_custom_settings, template_id, scrollback, background_image, background_opacity, background_blur,
 			cursor_style, cursor_blink, line_height, letter_spacing
 		FROM sessions WHERE id = ?
 	`, id)
@@ -229,7 +256,7 @@ func (s *Store) GetSession(id string) (*Session, error) {
 		&session.DataBits, &session.StopBits, &session.Parity, &session.NoNegotiation,
 		&loginScriptJSON, &tagsJSON,
 		&createdAt, &updatedAt, &lastUsedAt, &localEnvJSON,
-		&session.UseCustomSettings, &session.Scrollback, &session.BackgroundImage, &session.BackgroundOpacity, &session.BackgroundBlur,
+		&session.UseCustomSettings, &session.TemplateID, &session.Scrollback, &session.BackgroundImage, &session.BackgroundOpacity, &session.BackgroundBlur,
 		&session.CursorStyle, &session.CursorBlink, &session.LineHeight, &session.LetterSpacing,
 	)
 	if err != nil {
@@ -267,7 +294,7 @@ func (s *Store) ListSessions() ([]*Session, error) {
 			proxy_jump, proxy_command, terminal_type, font_size, font_family,
 			theme_id, encoding, data_bits, stop_bits, parity, no_negotiation,
 			login_script, tags, created_at, updated_at, last_used_at, local_env,
-			use_custom_settings, scrollback, background_image, background_opacity, background_blur,
+			use_custom_settings, template_id, scrollback, background_image, background_opacity, background_blur,
 			cursor_style, cursor_blink, line_height, letter_spacing
 		FROM sessions ORDER BY name
 	`)
@@ -287,7 +314,7 @@ func (s *Store) ListSessionsByGroup(group string) ([]*Session, error) {
 			proxy_jump, proxy_command, terminal_type, font_size, font_family,
 			theme_id, encoding, data_bits, stop_bits, parity, no_negotiation,
 			login_script, tags, created_at, updated_at, last_used_at, local_env,
-			use_custom_settings, scrollback, background_image, background_opacity, background_blur,
+			use_custom_settings, template_id, scrollback, background_image, background_opacity, background_blur,
 			cursor_style, cursor_blink, line_height, letter_spacing
 		FROM sessions WHERE group_path = ? ORDER BY name
 	`, group)
@@ -307,7 +334,7 @@ func (s *Store) SearchSessions(keyword string) ([]*Session, error) {
 			proxy_jump, proxy_command, terminal_type, font_size, font_family,
 			theme_id, encoding, data_bits, stop_bits, parity, no_negotiation,
 			login_script, tags, created_at, updated_at, last_used_at, local_env,
-			use_custom_settings, scrollback, background_image, background_opacity, background_blur,
+			use_custom_settings, template_id, scrollback, background_image, background_opacity, background_blur,
 			cursor_style, cursor_blink, line_height, letter_spacing
 		FROM sessions WHERE name LIKE ? OR host LIKE ? OR description LIKE ?
 		ORDER BY name
@@ -340,7 +367,7 @@ func (s *Store) scanSessions(rows *sql.Rows) ([]*Session, error) {
 			&session.DataBits, &session.StopBits, &session.Parity, &session.NoNegotiation,
 			&loginScriptJSON, &tagsJSON,
 			&createdAt, &updatedAt, &lastUsedAt, &localEnvJSON,
-			&session.UseCustomSettings, &session.Scrollback, &session.BackgroundImage, &session.BackgroundOpacity, &session.BackgroundBlur,
+			&session.UseCustomSettings, &session.TemplateID, &session.Scrollback, &session.BackgroundImage, &session.BackgroundOpacity, &session.BackgroundBlur,
 			&session.CursorStyle, &session.CursorBlink, &session.LineHeight, &session.LetterSpacing,
 		)
 		if err != nil {
@@ -383,7 +410,7 @@ func (s *Store) UpdateSession(session *Session) error {
 			proxy_jump = ?, proxy_command = ?, terminal_type = ?, font_size = ?,
 			font_family = ?, theme_id = ?, encoding = ?, login_script = ?, tags = ?,
 			local_env = ?, updated_at = ?,
-			use_custom_settings = ?, scrollback = ?, background_image = ?, background_opacity = ?, background_blur = ?,
+			use_custom_settings = ?, template_id = ?, scrollback = ?, background_image = ?, background_opacity = ?, background_blur = ?,
 			cursor_style = ?, cursor_blink = ?, line_height = ?, letter_spacing = ?
 		WHERE id = ?
 	`,
@@ -394,7 +421,7 @@ func (s *Store) UpdateSession(session *Session) error {
 		session.TerminalType, session.FontSize, session.FontFamily,
 		session.ThemeID, session.Encoding, string(loginScriptJSON), string(tagsJSON),
 		string(localEnvJSON), session.UpdatedAt.Format(time.RFC3339),
-		session.UseCustomSettings, session.Scrollback, session.BackgroundImage, session.BackgroundOpacity, session.BackgroundBlur,
+		session.UseCustomSettings, session.TemplateID, session.Scrollback, session.BackgroundImage, session.BackgroundOpacity, session.BackgroundBlur,
 		session.CursorStyle, session.CursorBlink, session.LineHeight, session.LetterSpacing,
 		session.ID,
 	)
@@ -785,4 +812,190 @@ func (s *Store) ListGroupsTree() ([]*GroupNode, error) {
 	}
 
 	return rootNodes, nil
+}
+
+// ========== 个性化模板管理 ==========
+
+// ListTemplates 获取所有模板
+func (s *Store) ListTemplates() ([]*PersonalizationTemplate, error) {
+	rows, err := s.db.Query(`
+		SELECT id, name, description, use_custom_settings, font_size, font_family, theme_id,
+		       scrollback, background_image, background_opacity, background_blur,
+		       cursor_style, cursor_blink, line_height, letter_spacing,
+		       created_at, updated_at
+		FROM personalization_templates ORDER BY updated_at DESC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var templates []*PersonalizationTemplate
+	for rows.Next() {
+		t := &PersonalizationTemplate{}
+		var createdAt, updatedAt sql.NullString
+
+		err := rows.Scan(
+			&t.ID, &t.Name, &t.Description, &t.UseCustomSettings,
+			&t.FontSize, &t.FontFamily, &t.ThemeID, &t.Scrollback,
+			&t.BackgroundImage, &t.BackgroundOpacity, &t.BackgroundBlur,
+			&t.CursorStyle, &t.CursorBlink, &t.LineHeight, &t.LetterSpacing,
+			&createdAt, &updatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if createdAt.Valid {
+			tim, _ := time.Parse(time.RFC3339, createdAt.String)
+			t.CreatedAt = FlexibleTime{Time: tim}
+		}
+		if updatedAt.Valid {
+			tim, _ := time.Parse(time.RFC3339, updatedAt.String)
+			t.UpdatedAt = FlexibleTime{Time: tim}
+		}
+
+		templates = append(templates, t)
+	}
+	return templates, nil
+}
+
+// GetTemplate 获取单个模板
+func (s *Store) GetTemplate(id string) (*PersonalizationTemplate, error) {
+	row := s.db.QueryRow(`
+		SELECT id, name, description, use_custom_settings, font_size, font_family, theme_id,
+		       scrollback, background_image, background_opacity, background_blur,
+		       cursor_style, cursor_blink, line_height, letter_spacing,
+		       created_at, updated_at
+		FROM personalization_templates WHERE id = ?
+	`, id)
+
+	t := &PersonalizationTemplate{}
+	var createdAt, updatedAt sql.NullString
+
+	err := row.Scan(
+		&t.ID, &t.Name, &t.Description, &t.UseCustomSettings,
+		&t.FontSize, &t.FontFamily, &t.ThemeID, &t.Scrollback,
+		&t.BackgroundImage, &t.BackgroundOpacity, &t.BackgroundBlur,
+		&t.CursorStyle, &t.CursorBlink, &t.LineHeight, &t.LetterSpacing,
+		&createdAt, &updatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if createdAt.Valid {
+		tim, _ := time.Parse(time.RFC3339, createdAt.String)
+		t.CreatedAt = FlexibleTime{Time: tim}
+	}
+	if updatedAt.Valid {
+		tim, _ := time.Parse(time.RFC3339, updatedAt.String)
+		t.UpdatedAt = FlexibleTime{Time: tim}
+	}
+
+	return t, nil
+}
+
+// CreateTemplate 创建模板
+func (s *Store) CreateTemplate(t *PersonalizationTemplate) error {
+	if t.ID == "" {
+		t.ID = generateTemplateID()
+	}
+	now := time.Now().Format(time.RFC3339)
+	t.CreatedAt = FlexibleTime{Time: time.Now()}
+	t.UpdatedAt = FlexibleTime{Time: time.Now()}
+
+	_, err := s.db.Exec(`
+		INSERT INTO personalization_templates (
+			id, name, description, use_custom_settings, font_size, font_family, theme_id,
+			scrollback, background_image, background_opacity, background_blur,
+			cursor_style, cursor_blink, line_height, letter_spacing,
+			created_at, updated_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, t.ID, t.Name, t.Description, t.UseCustomSettings,
+		t.FontSize, t.FontFamily, t.ThemeID, t.Scrollback,
+		t.BackgroundImage, t.BackgroundOpacity, t.BackgroundBlur,
+		t.CursorStyle, t.CursorBlink, t.LineHeight, t.LetterSpacing,
+		now, now)
+
+	return err
+}
+
+// UpdateTemplate 更新模板，并自动更新所有关联的会话
+func (s *Store) UpdateTemplate(t *PersonalizationTemplate) error {
+	t.Update()
+	now := t.UpdatedAt.Time.Format(time.RFC3339)
+
+	_, err := s.db.Exec(`
+		UPDATE personalization_templates SET
+			name = ?, description = ?, use_custom_settings = ?, font_size = ?, font_family = ?, theme_id = ?,
+			scrollback = ?, background_image = ?, background_opacity = ?, background_blur = ?,
+			cursor_style = ?, cursor_blink = ?, line_height = ?, letter_spacing = ?,
+			updated_at = ?
+		WHERE id = ?
+	`, t.Name, t.Description, t.UseCustomSettings,
+		t.FontSize, t.FontFamily, t.ThemeID, t.Scrollback,
+		t.BackgroundImage, t.BackgroundOpacity, t.BackgroundBlur,
+		t.CursorStyle, t.CursorBlink, t.LineHeight, t.LetterSpacing,
+		now, t.ID)
+
+	if err != nil {
+		return err
+	}
+
+	// 自动更新所有使用该模板的会话
+	rows, err := s.db.Query(`SELECT id FROM sessions WHERE template_id = ?`, t.ID)
+	if err != nil {
+		return nil // 查询失败不影响模板更新
+	}
+	defer rows.Close()
+
+	var sessionIDs []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err == nil {
+			sessionIDs = append(sessionIDs, id)
+		}
+	}
+
+	// 应用模板到所有关联会话
+	for _, sessionID := range sessionIDs {
+		session, err := s.GetSession(sessionID)
+		if err != nil {
+			continue
+		}
+		t.ApplyToSession(session)
+		if err := s.UpdateSession(session); err != nil {
+			continue
+		}
+	}
+
+	return nil
+}
+
+// DeleteTemplate 删除模板
+func (s *Store) DeleteTemplate(id string) error {
+	_, err := s.db.Exec(`DELETE FROM personalization_templates WHERE id = ?`, id)
+	return err
+}
+
+// ApplyTemplateToSessions 将模板应用到多个会话
+func (s *Store) ApplyTemplateToSessions(templateID string, sessionIDs []string) error {
+	template, err := s.GetTemplate(templateID)
+	if err != nil {
+		return err
+	}
+
+	for _, sessionID := range sessionIDs {
+		session, err := s.GetSession(sessionID)
+		if err != nil {
+			continue // 跳过不存在的会话
+		}
+		template.ApplyToSession(session)
+		if err := s.UpdateSession(session); err != nil {
+			continue // 跳过更新失败的会话
+		}
+	}
+
+	return nil
 }

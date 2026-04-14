@@ -25,6 +25,26 @@ export interface BackgroundFileInfo {
   modifiedTime: string
 }
 
+export interface PersonalizationTemplate {
+  id: string
+  name: string
+  description: string
+  createdAt: string
+  updatedAt: string
+  useCustomSettings: boolean
+  fontSize: number
+  fontFamily: string
+  themeId: string
+  scrollback: number
+  backgroundImage: string
+  backgroundOpacity: number
+  backgroundBlur: number
+  cursorStyle: 'block' | 'underline' | 'bar'
+  cursorBlink: boolean
+  lineHeight: number
+  letterSpacing: number
+}
+
 export interface Session {
   id: string
   name: string
@@ -58,6 +78,7 @@ export interface Session {
   lastUsedAt: string
   // 个性化设置
   useCustomSettings?: boolean
+  templateId?: string
   scrollback?: number
   backgroundImage?: string
   backgroundOpacity?: number
@@ -155,6 +176,15 @@ export const api = {
   updateGroup: (id: string, name: string, parentId: string): Promise<Group> => getWailsAPI().UpdateGroup(id, name, parentId),
   moveGroup: (id: string, newParentId: string): Promise<void> => getWailsAPI().MoveGroup(id, newParentId),
   deleteGroup: (id: string): Promise<void> => getWailsAPI().DeleteGroup(id),
+
+  // 个性化模板管理
+  listTemplates: (): Promise<PersonalizationTemplate[]> => getWailsAPI().ListTemplates(),
+  getTemplate: (id: string): Promise<PersonalizationTemplate> => getWailsAPI().GetTemplate(id),
+  createTemplate: (template: Partial<PersonalizationTemplate>): Promise<void> => getWailsAPI().CreateTemplate(template),
+  updateTemplate: (template: PersonalizationTemplate): Promise<void> => getWailsAPI().UpdateTemplate(template),
+  deleteTemplate: (id: string): Promise<void> => getWailsAPI().DeleteTemplate(id),
+  applyTemplateToSessions: (templateId: string, sessionIds: string[]): Promise<void> =>
+    getWailsAPI().ApplyTemplateToSessions(templateId, sessionIds),
 
   // Tab 连接
   connectTab: (tabId: string, sessionId: string, cols: number, rows: number): Promise<void> =>

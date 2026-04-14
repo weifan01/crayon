@@ -3,6 +3,7 @@ import { Image, Upload, Trash2, RotateCcw, Power, Grid, Plus } from 'lucide-reac
 import { useSettingsStore } from '../stores/settingsStore'
 import { useLocale } from '../stores/localeStore'
 import { api, BackgroundFileInfo } from '../api/wails'
+import { SliderInput, ToggleSwitch, SegmentedControl } from './ui'
 
 export function BackgroundSettingsPanel() {
   const { backgroundSettings, setBackgroundSettings, applyBackground, resetBackground } = useSettingsStore()
@@ -324,33 +325,25 @@ export function BackgroundSettingsPanel() {
 
           {/* 透明度滑块 */}
           <div className="mb-4">
-            <label className="text-sm mb-2 block" style={{ color: theme.ui.textSecondary }}>
-              {t('background.opacity')}: {Math.round(backgroundSettings.opacity * 100)}%
-            </label>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.05"
-              value={backgroundSettings.opacity}
-              onChange={(e) => handleSettingChange({ opacity: parseFloat(e.target.value) })}
-              className="w-full"
+            <SliderInput
+              value={Math.round(backgroundSettings.opacity * 100)}
+              onChange={(v) => handleSettingChange({ opacity: v / 100 })}
+              min={0}
+              max={100}
+              unit="%"
+              label={t('background.opacity')}
             />
           </div>
 
           {/* 模糊滑块 */}
           <div className="mb-4">
-            <label className="text-sm mb-2 block" style={{ color: theme.ui.textSecondary }}>
-              {t('background.blur')}: {backgroundSettings.blur}px
-            </label>
-            <input
-              type="range"
-              min="0"
-              max="20"
-              step="1"
+            <SliderInput
               value={backgroundSettings.blur}
-              onChange={(e) => handleSettingChange({ blur: parseInt(e.target.value) })}
-              className="w-full"
+              onChange={(v) => handleSettingChange({ blur: v })}
+              min={0}
+              max={20}
+              unit="px"
+              label={t('background.blur')}
             />
           </div>
 
