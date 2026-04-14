@@ -177,6 +177,7 @@ const zh: Record<string, string> = {
   // 主题设置
   'theme.selectTheme': '选择主题',
   'theme.preview': '终端预览',
+  'theme.colorLegend': '颜色含义：背景、红(错误)、绿(成功)、黄(警告)、蓝(目录)、紫(特殊)、青(链接)、白(普通文本)',
 
   // 终端设置
   'terminal.copyOnSelect': '选中即复制',
@@ -578,6 +579,7 @@ const en: Record<string, string> = {
   // Theme settings
   'theme.selectTheme': 'Select Theme',
   'theme.preview': 'Terminal Preview',
+  'theme.colorLegend': 'Colors: Background, Red (Error), Green (Success), Yellow (Warning), Blue (Dir), Magenta (Special), Cyan (Link), White (Text)',
 
   // Terminal settings
   'terminal.copyOnSelect': 'Copy on Select',

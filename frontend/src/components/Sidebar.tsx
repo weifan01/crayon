@@ -52,6 +52,11 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
   const [lastClickedId, setLastClickedId] = useState<string | null>(null)
   const [showBatchGroupMenu, setShowBatchGroupMenu] = useState(false)
 
+  // 拖拽状态
+  const [dialogPosition, setDialogPosition] = useState({ x: (window.innerWidth - 480) / 2, y: 80 })
+  const [isDraggingDialog, setIsDraggingDialog] = useState(false)
+  const dragOffset = useRef({ x: 0, y: 0 })
+
   const contextMenuRef = useRef<HTMLDivElement>(null)
   const resizeRef = useRef<HTMLDivElement>(null)
   const sidebarRef = useRef<HTMLDivElement>(null)
@@ -74,7 +79,13 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
   // 键盘快捷键：Ctrl+A 全选，Escape 取消选择/关闭对话框
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // 检查是否在输入框中，如果是则不拦截快捷键
+      const target = e.target as HTMLElement
+      const isInputFocused = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
+
       if (e.key === 'Escape') {
+        // 输入框中的 Escape 不拦截（如清除搜索框）
+        if (isInputFocused) return
         // 优先关闭对话框
         if (show) {
           e.preventDefault()
@@ -106,7 +117,8 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
         }
         setShowBatchGroupMenu(false)
       }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'a' && selectedSessions.size > 0) {
+      // Cmd+A 全选会话：仅在非输入框焦点时生效
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a' && !isInputFocused && selectedSessions.size > 0) {
         e.preventDefault()
         selectAll()
       }
@@ -151,6 +163,39 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
       document.removeEventListener('mouseup', handleMouseUp)
     }
   }, [isResizing, setSidebarWidth])
+
+  // 对话框拖拽处理
+  useEffect(() => {
+    if (!isDraggingDialog) return
+    const handleMouseMove = (e: MouseEvent) => {
+      // 限制对话框位置，确保头部至少有一部分在屏幕内（可拖拽回来）
+      const dialogWidth = 480
+      const minX = -dialogWidth + 100  // 至少保留100px在屏幕内
+      const maxX = window.innerWidth - 100
+      const minY = 0
+      const maxY = window.innerHeight - 100
+
+      setDialogPosition({
+        x: Math.max(minX, Math.min(maxX, e.clientX - dragOffset.current.x)),
+        y: Math.max(minY, Math.min(maxY, e.clientY - dragOffset.current.y)),
+      })
+    }
+    const handleMouseUp = () => setIsDraggingDialog(false)
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [isDraggingDialog])
+
+  const handleDialogMouseDown = (e: React.MouseEvent) => {
+    dragOffset.current = {
+      x: e.clientX - dialogPosition.x,
+      y: e.clientY - dialogPosition.y,
+    }
+    setIsDraggingDialog(true)
+  }
 
   // 自动隐藏模式下的悬浮显示
   const isVisible = sidebar.mode === 'auto-hide' ? isHovered : true
@@ -744,86 +789,113 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
 
       {/* 会话编辑对话框 */}
       {show && (
-        <div className="modal-overlay" onClick={() => setShow(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold mb-4 text-text-primary">{isNew ? t('sidebar.newSession') : t('sidebar.editSession')}</h3>
+        <div className="dialog-panel flex flex-col"
+          style={{
+            position: 'fixed',
+            left: dialogPosition.x,
+            top: dialogPosition.y,
+            width: 480,
+            maxHeight: '85vh',
+            zIndex: 1000,
+            cursor: isDraggingDialog ? 'grabbing' : 'default',
+          }}
+        >
+          {/* 拖拽标题栏 */}
+          <div
+            className="p-4 border-b border-surface-2 flex items-center justify-between"
+            onMouseDown={handleDialogMouseDown}
+            style={{ cursor: 'grab', userSelect: 'none' }}
+          >
+            <h3 className="text-lg font-semibold text-text-primary flex items-center gap-2">
+              {isNew ? <Plus size={20} /> : <Edit3 size={20} />}
+              {isNew ? t('sidebar.newSession') : t('sidebar.editSession')}
+            </h3>
+            <button
+              onClick={() => setShow(false)}
+              className="p-1 hover:bg-surface-2 rounded text-text-muted"
+              style={{ cursor: 'pointer' }}
+            >
+              ✕
+            </button>
+          </div>
+          <div className="p-4 overflow-y-auto flex-1">
             {err && <div className="mb-4 p-3 bg-red-900/30 border border-red-700/50 rounded-lg text-red-400 text-sm">{err}</div>}
             <div className="space-y-4">
-              <div><label className="block text-sm text-text-secondary mb-1">{t('common.name')} *</label><input value={edit.name || ''} onChange={e => setEdit({ ...edit, name: e.target.value })} className="input-field" autoFocus /></div>
-              <div><label className="block text-sm text-text-secondary mb-1">{t('common.protocol')}</label><select value={edit.protocol || 'ssh'} onChange={e => setEdit({ ...edit, protocol: e.target.value as Session['protocol'] })} className="input-field"><option value="ssh">SSH</option><option value="telnet">Telnet</option><option value="serial">Serial</option><option value="local">{t('quickConnect.local')}</option></select></div>
-              {edit.protocol === 'serial' ? (
-                <>
-                  <div><label className="block text-sm text-text-secondary mb-1">{t('session.serialPath')} *</label><input value={edit.host || ''} onChange={e => setEdit({ ...edit, host: e.target.value })} placeholder="/dev/ttyUSB0 / COM1" className="input-field" /></div>
-                  <div><label className="block text-sm text-text-secondary mb-1">{t('session.baudRate')}</label><select value={edit.port || 9600} onChange={e => setEdit({ ...edit, port: +e.target.value })} className="input-field"><option value="9600">9600</option><option value="19200">19200</option><option value="38400">38400</option><option value="57600">57600</option><option value="115200">115200</option></select></div>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div><label className="block text-sm text-text-secondary mb-1">{t('session.dataBits')}</label><select value={edit.dataBits || 8} onChange={e => setEdit({ ...edit, dataBits: +e.target.value })} className="input-field"><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option></select></div>
-                    <div><label className="block text-sm text-text-secondary mb-1">{t('session.stopBits')}</label><select value={edit.stopBits || 1} onChange={e => setEdit({ ...edit, stopBits: +e.target.value })} className="input-field"><option value="1">1</option><option value="2">2</option></select></div>
-                    <div><label className="block text-sm text-text-secondary mb-1">{t('session.parity')}</label><select value={edit.parity || 'none'} onChange={e => setEdit({ ...edit, parity: e.target.value as 'none' | 'even' | 'odd' })} className="input-field"><option value="none">None</option><option value="even">Even</option><option value="odd">Odd</option></select></div>
-                  </div>
-                </>
-              ) : edit.protocol === 'ssh' || edit.protocol === 'telnet' ? (
-                <>
-                  <div className="grid grid-cols-3 gap-3"><div className="col-span-2"><label className="block text-sm text-text-secondary mb-1">{t('common.host')} *</label><input value={edit.host || ''} onChange={e => setEdit({ ...edit, host: e.target.value })} className="input-field" /></div><div><label className="block text-sm text-text-secondary mb-1">{t('common.port')}</label><input type="number" value={edit.port || (edit.protocol === 'telnet' ? 23 : 22)} onChange={e => setEdit({ ...edit, port: +e.target.value || (edit.protocol === 'telnet' ? 23 : 22) })} className="input-field" /></div></div>
-                  {edit.protocol === 'ssh' && (
-                    <>
-                      <div><label className="block text-sm text-text-secondary mb-1">{t('session.username')} *</label><input value={edit.user || ''} onChange={e => setEdit({ ...edit, user: e.target.value })} className="input-field" /></div>
-                      <div><label className="block text-sm text-text-secondary mb-1">{t('session.authType')}</label><select value={edit.authType || 'password'} onChange={e => setEdit({ ...edit, authType: e.target.value as Session['authType'] })} className="input-field"><option value="password">{t('session.password')}</option><option value="key">{t('session.publicKey')}</option></select></div>
-                      {edit.authType === 'password' && <div><label className="block text-sm text-text-secondary mb-1">{t('session.password')}</label><input type="password" value={edit.password || ''} onChange={e => setEdit({ ...edit, password: e.target.value })} className="input-field" /></div>}
-                      {edit.authType === 'key' && (
-                        <>
-                          <div><label className="block text-sm text-text-secondary mb-1">{t('session.keyPath')}</label><input value={edit.keyPath || ''} onChange={e => setEdit({ ...edit, keyPath: e.target.value })} placeholder="~/.ssh/id_rsa" className="input-field" /></div>
-                          <div><label className="block text-sm text-text-secondary mb-1">{t('session.keyPassphrase')}</label><input type="password" value={edit.keyPassphrase || ''} onChange={e => setEdit({ ...edit, keyPassphrase: e.target.value })} placeholder={t('session.optional')} className="input-field" /></div>
-                        </>
-                      )}
-                    </>
-                  )}
-                  {edit.protocol === 'telnet' && (
-                    <>
-                      <div className="p-2 bg-surface-2 rounded text-xs text-text-muted mb-2">{t('session.telnetLoginHint')}</div>
-                      <div><label className="block text-sm text-text-secondary mb-1">{t('session.username')}</label><input value={edit.user || ''} onChange={e => setEdit({ ...edit, user: e.target.value })} placeholder={t('session.optional')} className="input-field" /></div>
-                      <div><label className="block text-sm text-text-secondary mb-1">{t('session.password')}</label><input type="password" value={edit.password || ''} onChange={e => setEdit({ ...edit, password: e.target.value })} placeholder={t('session.optional')} className="input-field" /></div>
-                      <div className="flex items-center gap-2 mt-2">
-                        <input type="checkbox" id="noNegotiation" checked={edit.noNegotiation || false} onChange={e => setEdit({ ...edit, noNegotiation: e.target.checked })} className="w-4 h-4" />
-                        <label htmlFor="noNegotiation" className="text-sm text-text-secondary cursor-pointer">{t('session.noNegotiation')}</label>
-                      </div>
-                      <p className="text-xs text-text-muted mt-1">{t('session.noNegotiationHint')}</p>
-                    </>
-                  )}
-                </>
-              ) : (
-                // local 协议：显示 Shell 类型和工作目录配置
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm text-text-secondary mb-1">{t('quickConnect.localShell')}</label>
-                    <select value={edit.host || ''} onChange={e => setEdit({ ...edit, host: e.target.value })} className="input-field">
-                      <option value="">{t('quickConnect.selectShell')}</option>
-                      <option value="bash">Bash</option>
-                      <option value="zsh">Zsh</option>
-                      <option value="fish">Fish</option>
-                      <option value="/bin/sh">Sh</option>
-                      <option value="cmd">CMD (Windows)</option>
-                      <option value="powershell">PowerShell (Windows)</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm text-text-secondary mb-1">{t('quickConnect.workingDir')}</label>
-                    <input value={edit.user || ''} onChange={e => setEdit({ ...edit, user: e.target.value })} placeholder={t('quickConnect.workingDirPlaceholder')} className="input-field" />
-                  </div>
+            <div><label className="block text-sm text-text-secondary mb-1">{t('common.name')} *</label><input value={edit.name || ''} onChange={e => setEdit({ ...edit, name: e.target.value })} className="input-field" autoFocus /></div>
+            <div><label className="block text-sm text-text-secondary mb-1">{t('common.protocol')}</label><select value={edit.protocol || 'ssh'} onChange={e => setEdit({ ...edit, protocol: e.target.value as Session['protocol'] })} className="input-field"><option value="ssh">SSH</option><option value="telnet">Telnet</option><option value="serial">Serial</option><option value="local">{t('quickConnect.local')}</option></select></div>
+            {edit.protocol === 'serial' ? (
+              <>
+                <div><label className="block text-sm text-text-secondary mb-1">{t('session.serialPath')} *</label><input value={edit.host || ''} onChange={e => setEdit({ ...edit, host: e.target.value })} placeholder="/dev/ttyUSB0 / COM1" className="input-field" /></div>
+                <div><label className="block text-sm text-text-secondary mb-1">{t('session.baudRate')}</label><select value={edit.port || 9600} onChange={e => setEdit({ ...edit, port: +e.target.value })} className="input-field"><option value="9600">9600</option><option value="19200">19200</option><option value="38400">38400</option><option value="57600">57600</option><option value="115200">115200</option></select></div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div><label className="block text-sm text-text-secondary mb-1">{t('session.dataBits')}</label><select value={edit.dataBits || 8} onChange={e => setEdit({ ...edit, dataBits: +e.target.value })} className="input-field"><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option></select></div>
+                  <div><label className="block text-sm text-text-secondary mb-1">{t('session.stopBits')}</label><select value={edit.stopBits || 1} onChange={e => setEdit({ ...edit, stopBits: +e.target.value })} className="input-field"><option value="1">1</option><option value="2">2</option></select></div>
+                  <div><label className="block text-sm text-text-secondary mb-1">{t('session.parity')}</label><select value={edit.parity || 'none'} onChange={e => setEdit({ ...edit, parity: e.target.value as 'none' | 'even' | 'odd' })} className="input-field"><option value="none">None</option><option value="even">Even</option><option value="odd">Odd</option></select></div>
                 </div>
-              )}
-              <div>
-                <label className="block text-sm text-text-secondary mb-1">{t('session.group')}</label>
-                <select value={edit.group || ''} onChange={e => setEdit({ ...edit, group: e.target.value })} className="input-field">
-                  <option value="">{t('sidebar.noGroup')}</option>
-                  {groups.map(g => <option key={g.id} value={g.path}>{g.path}</option>)}
-                </select>
+              </>
+            ) : edit.protocol === 'ssh' || edit.protocol === 'telnet' ? (
+              <>
+                <div className="grid grid-cols-3 gap-3"><div className="col-span-2"><label className="block text-sm text-text-secondary mb-1">{t('common.host')} *</label><input value={edit.host || ''} onChange={e => setEdit({ ...edit, host: e.target.value })} className="input-field" /></div><div><label className="block text-sm text-text-secondary mb-1">{t('common.port')}</label><input type="number" value={edit.port || (edit.protocol === 'telnet' ? 23 : 22)} onChange={e => setEdit({ ...edit, port: +e.target.value || (edit.protocol === 'telnet' ? 23 : 22) })} className="input-field" /></div></div>
+                {edit.protocol === 'ssh' && (
+                  <>
+                    <div><label className="block text-sm text-text-secondary mb-1">{t('session.username')} *</label><input value={edit.user || ''} onChange={e => setEdit({ ...edit, user: e.target.value })} className="input-field" /></div>
+                    <div><label className="block text-sm text-text-secondary mb-1">{t('session.authType')}</label><select value={edit.authType || 'password'} onChange={e => setEdit({ ...edit, authType: e.target.value as Session['authType'] })} className="input-field"><option value="password">{t('session.password')}</option><option value="key">{t('session.publicKey')}</option></select></div>
+                    {edit.authType === 'password' && <div><label className="block text-sm text-text-secondary mb-1">{t('session.password')}</label><input type="password" value={edit.password || ''} onChange={e => setEdit({ ...edit, password: e.target.value })} className="input-field" /></div>}
+                    {edit.authType === 'key' && (
+                      <>
+                        <div><label className="block text-sm text-text-secondary mb-1">{t('session.keyPath')}</label><input value={edit.keyPath || ''} onChange={e => setEdit({ ...edit, keyPath: e.target.value })} placeholder="~/.ssh/id_rsa" className="input-field" /></div>
+                        <div><label className="block text-sm text-text-secondary mb-1">{t('session.keyPassphrase')}</label><input type="password" value={edit.keyPassphrase || ''} onChange={e => setEdit({ ...edit, keyPassphrase: e.target.value })} placeholder={t('session.optional')} className="input-field" /></div>
+                      </>
+                    )}
+                  </>
+                )}
+                {edit.protocol === 'telnet' && (
+                  <>
+                    <div className="p-2 bg-surface-2 rounded text-xs text-text-muted mb-2">{t('session.telnetLoginHint')}</div>
+                    <div><label className="block text-sm text-text-secondary mb-1">{t('session.username')}</label><input value={edit.user || ''} onChange={e => setEdit({ ...edit, user: e.target.value })} placeholder={t('session.optional')} className="input-field" /></div>
+                    <div><label className="block text-sm text-text-secondary mb-1">{t('session.password')}</label><input type="password" value={edit.password || ''} onChange={e => setEdit({ ...edit, password: e.target.value })} placeholder={t('session.optional')} className="input-field" /></div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <input type="checkbox" id="noNegotiation" checked={edit.noNegotiation || false} onChange={e => setEdit({ ...edit, noNegotiation: e.target.checked })} className="w-4 h-4" />
+                      <label htmlFor="noNegotiation" className="text-sm text-text-secondary cursor-pointer">{t('session.noNegotiation')}</label>
+                    </div>
+                    <p className="text-xs text-text-muted mt-1">{t('session.noNegotiationHint')}</p>
+                  </>
+                )}
+              </>
+            ) : (
+              // local 协议：显示 Shell 类型和工作目录配置
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm text-text-secondary mb-1">{t('quickConnect.localShell')}</label>
+                  <select value={edit.host || ''} onChange={e => setEdit({ ...edit, host: e.target.value })} className="input-field">
+                    <option value="">{t('quickConnect.selectShell')}</option>
+                    <option value="bash">Bash</option>
+                    <option value="zsh">Zsh</option>
+                    <option value="fish">Fish</option>
+                    <option value="/bin/sh">Sh</option>
+                    <option value="cmd">CMD (Windows)</option>
+                    <option value="powershell">PowerShell (Windows)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm text-text-secondary mb-1">{t('quickConnect.workingDir')}</label>
+                  <input value={edit.user || ''} onChange={e => setEdit({ ...edit, user: e.target.value })} placeholder={t('quickConnect.workingDirPlaceholder')} className="input-field" />
+                </div>
               </div>
-              <div><label className="block text-sm text-text-secondary mb-1">{t('session.description')}</label><textarea value={edit.description || ''} onChange={e => setEdit({ ...edit, description: e.target.value })} rows={2} className="input-field resize-none" /></div>
+            )}
+            <div>
+              <label className="block text-sm text-text-secondary mb-1">{t('session.group')}</label>
+              <select value={edit.group || ''} onChange={e => setEdit({ ...edit, group: e.target.value })} className="input-field">
+                <option value="">{t('sidebar.noGroup')}</option>
+                {groups.map(g => <option key={g.id} value={g.path}>{g.path}</option>)}
+              </select>
             </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <button onClick={() => setShow(false)} className="btn btn-secondary" disabled={saving}>{t('common.cancel')}</button>
-              <button onClick={handleSave} className="btn btn-primary" disabled={saving}>{saving ? t('sidebar.saving') : t('common.save')}</button>
+            <div><label className="block text-sm text-text-secondary mb-1">{t('session.description')}</label><textarea value={edit.description || ''} onChange={e => setEdit({ ...edit, description: e.target.value })} rows={2} className="input-field resize-none" /></div>
             </div>
+          </div>
+          <div className="p-4 border-t border-surface-2 flex justify-end gap-3">
+            <button onClick={() => setShow(false)} className="btn btn-secondary" disabled={saving}>{t('common.cancel')}</button>
+            <button onClick={handleSave} className="btn btn-primary" disabled={saving}>{saving ? t('sidebar.saving') : t('common.save')}</button>
           </div>
         </div>
       )}

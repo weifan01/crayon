@@ -718,15 +718,35 @@ select.input-field option {
   background-color: var(--surface-3);
 }
 
-/* 模态框样式 */
+/* 模态框样式 - 不使用全屏遮罩 */
 .modal-overlay {
-  @apply fixed inset-0 flex items-center justify-center z-50;
-  background-color: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
+  @apply fixed z-50;
+  /* 不使用 inset-0 和背景，让对话框可以自由移动 */
+}
+
+/* 可拖拽对话框样式 */
+.draggable-dialog {
+  position: fixed;
+  z-index: 1000;
+}
+
+.draggable-dialog .dialog-header {
+  min-height: 24px;
+}
+
+/* 对话框统一样式 - 与主窗口微妙区分 */
+.dialog-panel {
+  @apply rounded-lg;
+  /* 稍微调亮背景色 */
+  background-color: color-mix(in srgb, var(--surface-1) 95%, white 5%);
+  /* 无边框 */
+  border: none;
+  /* 稍强的阴影以区分层次 */
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25), 0 6px 16px rgba(0, 0, 0, 0.15);
 }
 
 .modal-content {
-  @apply rounded-2xl p-6 w-[480px] max-h-[90vh] overflow-y-auto shadow-2xl;
+  @apply rounded-2xl p-6 max-h-[90vh] overflow-y-auto shadow-2xl;
   background-color: var(--surface-1);
   border: 3px solid var(--border-color);
   box-shadow:

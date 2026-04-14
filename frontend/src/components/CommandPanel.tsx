@@ -154,26 +154,31 @@ export function CommandPanel({ onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-surface-1 border border-surface-2 rounded-lg w-[600px] max-h-[80vh] flex flex-col">
-        <div className="p-4 border-b border-surface-2 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-text-primary flex items-center gap-2">
-            <Terminal size={20} />
-            {t('command.title')}
-          </h2>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => { setShowBatch(true); setSelectedTabs(connectedTabs.map(t => t.paneId)) }}
-              className="px-3 py-1.5 text-sm bg-accent-blue/20 text-accent-blue rounded hover:bg-accent-blue/30 flex items-center gap-1"
-            >
-              <Play size={14} />
-              {t('command.batchSend')}
-            </button>
-            <button onClick={onClose} className="p-1 hover:bg-surface-2 rounded text-text-muted">
-              <X size={18} />
-            </button>
-          </div>
+    <div className="dialog-panel w-[600px] max-h-[80vh] flex flex-col fixed"
+      style={{
+        left: (window.innerWidth - 600) / 2,
+        top: 80,
+        zIndex: 1000,
+      }}
+    >
+      <div className="p-4 border-b border-surface-2 flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-text-primary flex items-center gap-2">
+          <Terminal size={20} />
+          {t('command.title')}
+        </h2>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => { setShowBatch(true); setSelectedTabs(connectedTabs.map(t => t.paneId)) }}
+            className="px-3 py-1.5 text-sm bg-accent-blue/20 text-accent-blue rounded hover:bg-accent-blue/30 flex items-center gap-1"
+          >
+            <Play size={14} />
+            {t('command.batchSend')}
+          </button>
+          <button onClick={onClose} className="p-1 hover:bg-surface-2 rounded text-text-muted" style={{ cursor: 'pointer' }}>
+            <X size={18} />
+          </button>
         </div>
+      </div>
 
         <div className="p-3 border-b border-surface-2 flex items-center gap-2">
           <input
@@ -254,43 +259,46 @@ export function CommandPanel({ onClose }: Props) {
         </div>
 
         {show && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-60" onClick={() => setShow(false)}>
-            <div className="bg-surface-1 border border-surface-2 rounded-lg w-[450px] p-6" onClick={e => e.stopPropagation()}>
-              <h3 className="text-lg font-semibold mb-4 text-text-primary">
-                {isNew ? t('command.newCommand') : t('command.editCommand')}
-              </h3>
-              {err && <div className="mb-4 p-3 bg-red-900/30 border border-red-700/50 rounded text-red-400 text-sm">{err}</div>}
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm text-text-secondary mb-1">{t('command.nameRequired')}</label>
-                  <input value={edit.name || ''} onChange={e => setEdit({ ...edit, name: e.target.value })} className="input-field" />
-                </div>
-                <div>
-                  <label className="block text-sm text-text-secondary mb-1">{t('command.contentRequired')}</label>
-                  <textarea value={edit.content || ''} onChange={e => setEdit({ ...edit, content: e.target.value })} className="input-field font-mono" rows={3} />
-                </div>
-                <div>
-                  <label className="block text-sm text-text-secondary mb-1">{t('command.group')}</label>
-                  <input value={edit.group || ''} onChange={e => setEdit({ ...edit, group: e.target.value })} className="input-field" />
-                </div>
-                <div>
-                  <label className="block text-sm text-text-secondary mb-1">{t('command.description')}</label>
-                  <input value={edit.description || ''} onChange={e => setEdit({ ...edit, description: e.target.value })} className="input-field" />
-                </div>
+          <div
+            className="dialog-panel w-[450px] p-4 fixed"
+            style={{ left: (window.innerWidth - 450) / 2, top: 150, zIndex: 1001 }}
+          >
+            <h3 className="text-lg font-semibold mb-4 text-text-primary">
+              {isNew ? t('command.newCommand') : t('command.editCommand')}
+            </h3>
+            {err && <div className="mb-4 p-3 bg-red-900/30 border border-red-700/50 rounded text-red-400 text-sm">{err}</div>}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-text-secondary mb-1">{t('command.nameRequired')}</label>
+                <input value={edit.name || ''} onChange={e => setEdit({ ...edit, name: e.target.value })} className="input-field" />
               </div>
-              <div className="flex justify-end gap-3 mt-6">
-                <button onClick={() => setShow(false)} className="btn btn-secondary" disabled={saving}>{t('common.cancel')}</button>
-                <button onClick={handleSave} className="btn btn-primary" disabled={saving}>{saving ? t('command.saving') : t('common.save')}</button>
+              <div>
+                <label className="block text-sm text-text-secondary mb-1">{t('command.contentRequired')}</label>
+                <textarea value={edit.content || ''} onChange={e => setEdit({ ...edit, content: e.target.value })} className="input-field font-mono" rows={3} />
               </div>
+              <div>
+                <label className="block text-sm text-text-secondary mb-1">{t('command.group')}</label>
+                <input value={edit.group || ''} onChange={e => setEdit({ ...edit, group: e.target.value })} className="input-field" />
+              </div>
+              <div>
+                <label className="block text-sm text-text-secondary mb-1">{t('command.description')}</label>
+                <input value={edit.description || ''} onChange={e => setEdit({ ...edit, description: e.target.value })} className="input-field" />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button onClick={() => setShow(false)} className="btn btn-secondary" disabled={saving}>{t('common.cancel')}</button>
+              <button onClick={handleSave} className="btn btn-primary" disabled={saving}>{saving ? t('command.saving') : t('common.save')}</button>
             </div>
           </div>
         )}
 
         {showBatch && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-60" onClick={() => setShowBatch(false)}>
-            <div className="bg-surface-1 border border-surface-2 rounded-lg w-[500px] p-6" onClick={e => e.stopPropagation()}>
-              <h3 className="text-lg font-semibold mb-4 text-text-primary">{t('command.batchTitle')}</h3>
-              <p className="text-xs text-text-muted mb-4">{t('command.batchHint')}</p>
+          <div
+            className="dialog-panel w-[500px] p-4 fixed"
+            style={{ left: (window.innerWidth - 500) / 2, top: 150, zIndex: 1001 }}
+          >
+            <h3 className="text-lg font-semibold mb-4 text-text-primary">{t('command.batchTitle')}</h3>
+            <p className="text-xs text-text-muted mb-4">{t('command.batchHint')}</p>
 
               <div className="mb-4">
                 <label className="block text-sm text-text-secondary mb-2">{t('command.targetTabs').replace('{count}', String(connectedTabs.length))}</label>
@@ -321,9 +329,7 @@ export function CommandPanel({ onClose }: Props) {
                 </button>
               </div>
             </div>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
+          )}
+        </div>
+      )
+    }

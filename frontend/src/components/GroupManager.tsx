@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { X, Trash2, Folder, Pencil, Check, ChevronRight, ChevronDown, FolderTree, Plus, FolderPlus } from 'lucide-react'
 import { useSessionStore } from '../stores/sessionStore'
 import { useLocale } from '../stores/localeStore'
@@ -20,7 +20,45 @@ export function GroupManager({ onClose }: Props) {
   const [updating, setUpdating] = useState(false)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
 
+  // 拖拽状态
+  const [position, setPosition] = useState({ x: (window.innerWidth - 480) / 2, y: 80 })
+  const [isDragging, setIsDragging] = useState(false)
+  const dragOffset = useRef({ x: 0, y: 0 })
+
   useEffect(() => { loadSessions(); loadGroups(); loadGroupsTree() }, [])
+
+  // 拖拽处理
+  useEffect(() => {
+    if (!isDragging) return
+    const handleMouseMove = (e: MouseEvent) => {
+      // 限制对话框位置，确保至少有一部分在屏幕内
+      const dialogWidth = 480
+      const minX = -dialogWidth + 100
+      const maxX = window.innerWidth - 100
+      const minY = 0
+      const maxY = window.innerHeight - 100
+
+      setPosition({
+        x: Math.max(minX, Math.min(maxX, e.clientX - dragOffset.current.x)),
+        y: Math.max(minY, Math.min(maxY, e.clientY - dragOffset.current.y)),
+      })
+    }
+    const handleMouseUp = () => setIsDragging(false)
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [isDragging])
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    const rect = (e.currentTarget as HTMLElement).parentElement?.getBoundingClientRect()
+    if (rect) {
+      dragOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top }
+      setIsDragging(true)
+    }
+  }
 
   const toggleExpand = (groupId: string) => {
     setExpandedGroups(prev => {
@@ -228,91 +266,96 @@ export function GroupManager({ onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm" onClick={onClose}>
+    <div
+      className="dialog-panel overflow-hidden flex flex-col max-h-[85vh]"
+      style={{
+        position: 'fixed',
+        left: position.x,
+        top: position.y,
+        width: 480,
+        zIndex: 1000,
+        cursor: isDragging ? 'grabbing' : 'default',
+      }}
+    >
+      {/* 头部 - 可拖拽 */}
       <div
-        className="bg-surface-1 border border-surface-2/50 rounded-2xl w-[480px] shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
-        onClick={e => e.stopPropagation()}
+        className="p-4 border-b border-surface-2 flex items-center justify-between flex-shrink-0"
+        onMouseDown={handleMouseDown}
+        style={{ cursor: 'grab', userSelect: 'none' }}
       >
-        {/* 头部 */}
-        <div className="p-5 border-b border-surface-2/50 flex items-center justify-between flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
-              <FolderTree size={20} className="text-accent" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-text-primary">{t('group.title')}</h2>
-              <p className="text-xs text-text-muted">{groups.length} {t('group.items')}</p>
-            </div>
+        <h2 className="text-lg font-semibold text-text-primary flex items-center gap-2">
+          <FolderTree size={20} />
+          {t('group.title')}
+        </h2>
+        <button
+          onClick={onClose}
+          className="p-1 hover:bg-surface-2 rounded text-text-muted"
+          style={{ cursor: 'pointer' }}
+        >
+          <X size={18} />
+        </button>
+      </div>
+
+      {/* 新建分组 */}
+      <div className="p-4 border-b border-surface-2 flex-shrink-0">
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <input
+              value={newGroupName}
+              onChange={e => setNewGroupName(e.target.value)}
+              placeholder={t('group.newName')}
+              className="input-field w-full"
+              autoFocus
+              onKeyDown={e => e.key === 'Enter' && handleCreate()}
+            />
+          </div>
+          <div className="w-36">
+            <select
+              value={newGroupParentId}
+              onChange={e => setNewGroupParentId(e.target.value)}
+              className="input-field w-full text-sm"
+            >
+              <option value="">{t('group.root')}</option>
+              {groups.map(g => (
+                <option key={g.id} value={g.id}>{g.path}</option>
+              ))}
+            </select>
           </div>
           <button
-            onClick={onClose}
-            className="p-2 hover:bg-surface-2 rounded-xl text-text-muted hover:text-text-primary transition-colors"
+            onClick={handleCreate}
+            disabled={creating || !newGroupName.trim()}
+            className="btn btn-primary px-4 flex items-center gap-2"
           >
-            <X size={18} />
+            {creating ? (
+              <span className="animate-spin">⏳</span>
+            ) : (
+              <Plus size={16} />
+            )}
+            <span className="hidden sm:inline">{t('group.create')}</span>
           </button>
         </div>
+      </div>
 
-        {/* 新建分组 */}
-        <div className="p-4 border-b border-surface-2/50 bg-surface-0/30 flex-shrink-0">
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <input
-                value={newGroupName}
-                onChange={e => setNewGroupName(e.target.value)}
-                placeholder={t('group.newName')}
-                className="input-field w-full"
-                autoFocus
-                onKeyDown={e => e.key === 'Enter' && handleCreate()}
-              />
+      {/* 分组列表 */}
+      <div className="flex-1 overflow-y-auto min-h-0">
+        {!groupsTree.length ? (
+          <div className="p-12 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-surface-2 flex items-center justify-center mx-auto mb-4">
+              <FolderPlus size={28} className="text-text-muted" />
             </div>
-            <div className="w-36">
-              <select
-                value={newGroupParentId}
-                onChange={e => setNewGroupParentId(e.target.value)}
-                className="input-field w-full text-sm"
-              >
-                <option value="">{t('group.root')}</option>
-                {groups.map(g => (
-                  <option key={g.id} value={g.id}>{g.path}</option>
-                ))}
-              </select>
-            </div>
-            <button
-              onClick={handleCreate}
-              disabled={creating || !newGroupName.trim()}
-              className="btn btn-primary px-4 flex items-center gap-2"
-            >
-              {creating ? (
-                <span className="animate-spin">⏳</span>
-              ) : (
-                <Plus size={16} />
-              )}
-              <span className="hidden sm:inline">{t('group.create')}</span>
-            </button>
+            <p className="text-text-muted text-sm">{t('group.noGroups')}</p>
+            <p className="text-text-muted/60 text-xs mt-1">{t('group.noGroupsTip')}</p>
           </div>
-        </div>
+        ) : (
+          <div>
+            {groupsTree.map(node => renderGroupNode(node))}
+          </div>
+        )}
+      </div>
 
-        {/* 分组列表 */}
-        <div className="flex-1 overflow-y-auto min-h-0">
-          {!groupsTree.length ? (
-            <div className="p-12 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-surface-2 flex items-center justify-center mx-auto mb-4">
-                <FolderPlus size={28} className="text-text-muted" />
-              </div>
-              <p className="text-text-muted text-sm">{t('group.noGroups')}</p>
-              <p className="text-text-muted/60 text-xs mt-1">{t('group.noGroupsTip')}</p>
-            </div>
-          ) : (
-            <div>
-              {groupsTree.map(node => renderGroupNode(node))}
-            </div>
-          )}
-        </div>
-
-        {/* 底部 */}
-        <div className="p-4 border-t border-surface-2/50 flex justify-end flex-shrink-0">
-          <button onClick={onClose} className="btn btn-secondary">{t('common.close')}</button>
-        </div>
+      {/* 底部 */}
+      <div className="p-4 border-t border-surface-2 flex justify-end flex-shrink-0">
+        <button onClick={onClose} className="btn btn-secondary">{t('common.close')}</button>
       </div>
     </div>
   )

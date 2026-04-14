@@ -202,9 +202,18 @@ export function SettingsPanel({ onClose }: Props) {
     const handleMouseMove = (e: MouseEvent) => {
       const dx = e.clientX - dragStartRef.current.x
       const dy = e.clientY - dragStartRef.current.y
+      const newX = dragStartRef.current.posX + dx
+      const newY = dragStartRef.current.posY + dy
+
+      // 限制对话框位置，确保至少有一部分在屏幕内
+      const minX = -panelWidth + 100
+      const maxX = window.innerWidth - 100
+      const minY = 0
+      const maxY = window.innerHeight - 100
+
       setPosition({
-        x: dragStartRef.current.posX + dx,
-        y: dragStartRef.current.posY + dy,
+        x: Math.max(minX, Math.min(maxX, newX)),
+        y: Math.max(minY, Math.min(maxY, newY)),
       })
     }
 
@@ -221,7 +230,7 @@ export function SettingsPanel({ onClose }: Props) {
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
     }
-  }, [isDragging])
+  }, [isDragging, panelWidth])
 
   // 宽度缩放处理
   useEffect(() => {
@@ -490,36 +499,22 @@ export function SettingsPanel({ onClose }: Props) {
   const displayTheme = previewTheme || appThemes.find(t => t.id === currentTheme) || appThemes[0]
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={(e) => {
-      // 使用 ref 同步检查 + 时间戳检查，防止 mouseup 后 click 事件触发关闭
-      // mouseup 事件先于 click 触发，所以需要检查最近是否刚结束 resize/drag
-      const now = Date.now()
-      if (isResizingWidthRef.current || isDraggingRef.current) return
-      if (now - lastResizeEndRef.current < 100 || now - lastDragEndRef.current < 100) return
-      onClose()
-    }}>
+    <div className="fixed inset-0 flex items-center justify-center z-50">
       <div
         ref={panelRef}
-        className="rounded-2xl max-h-[85vh] overflow-hidden shadow-2xl flex relative"
+        className="dialog-panel max-h-[85vh] overflow-hidden flex relative"
         style={{
+          position: 'fixed',
+          left: position.x + (window.innerWidth - panelWidth) / 2,
+          top: position.y + 80,
           width: `${panelWidth}px`,
-          backgroundColor: theme.ui.surface0,
-          transform: `translate(${position.x}px, ${position.y}px)`,
         }}
-        onClick={e => e.stopPropagation()}
       >
         {/* 左侧导航 */}
-        <div
-          className="w-48 p-4 flex flex-col"
-          style={{
-            backgroundColor: theme.ui.surface1,
-            borderRight: `1px solid ${theme.ui.border}`
-          }}
-        >
+        <div className="w-48 p-4 flex flex-col bg-surface-1 border-r border-surface-2">
           {/* 拖动手柄 */}
           <div
-            className="flex items-center gap-2 mb-6 cursor-move select-none"
-            style={{ color: theme.ui.textMuted }}
+            className="flex items-center gap-2 mb-6 cursor-move select-none text-text-muted"
             onMouseDown={handleMouseDown}
           >
             <GripHorizontal size={16} />
@@ -932,13 +927,20 @@ export function SettingsPanel({ onClose }: Props) {
                           {isSelected && <Check size={14} style={{ color: t.ui.accent }} />}
                         </div>
                         <div className="flex gap-1">
-                          {[t.terminal.background, t.terminal.red, t.terminal.green, t.terminal.yellow, t.terminal.blue, t.terminal.magenta].map((color, idx) => (
-                            <div key={idx} className="w-4 h-4 rounded" style={{ backgroundColor: color }} />
+                          {[t.terminal.background, t.terminal.red, t.terminal.green, t.terminal.yellow, t.terminal.blue, t.terminal.magenta, t.terminal.cyan, t.terminal.white].map((color, idx) => (
+                            <div key={idx} className="w-3 h-4 rounded" style={{ backgroundColor: color }} />
                           ))}
                         </div>
                       </div>
                     )
                   })}
+                </div>
+
+                <div
+                  className="p-4 rounded-xl text-sm"
+                  style={{ backgroundColor: theme.ui.surface1, color: theme.ui.textMuted }}
+                >
+                  💡 {t('theme.colorLegend')}
                 </div>
               </div>
 
