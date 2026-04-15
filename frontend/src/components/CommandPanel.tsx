@@ -78,7 +78,8 @@ export function CommandPanel({ onClose }: Props) {
   }
 
   const handleDelete = async (id: string) => {
-    if (confirm(t('command.confirmDelete'))) {
+    const confirmed = await api.confirmDialog(t('command.confirmDelete'), '')
+    if (confirmed) {
       await api.deleteCommand(id)
       loadCommands()
     }

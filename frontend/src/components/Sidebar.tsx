@@ -891,6 +891,17 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
               </select>
             </div>
             <div><label className="block text-sm text-text-secondary mb-1">{t('session.description')}</label><textarea value={edit.description || ''} onChange={e => setEdit({ ...edit, description: e.target.value })} rows={2} className="input-field resize-none" /></div>
+            <div>
+              <label className="block text-sm text-text-secondary mb-1">{t('session.loginScript')}</label>
+              <textarea
+                value={(edit.loginScript || []).join('\n')}
+                onChange={e => setEdit({ ...edit, loginScript: e.target.value.split('\n').filter(s => s.trim()) })}
+                rows={3}
+                className="input-field resize-none"
+                placeholder={t('session.loginScriptPlaceholder')}
+              />
+              <p className="text-xs text-text-muted mt-1">{t('session.loginScriptHint')}</p>
+            </div>
             </div>
           </div>
           <div className="p-4 border-t border-surface-2 flex justify-end gap-3">
