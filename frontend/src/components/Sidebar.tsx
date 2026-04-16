@@ -44,7 +44,7 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
   const [err, setErr] = useState('')
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const [isResizing, setIsResizing] = useState(false)
-  const [isHovered, setIsHovered] = useState(false)
+  const [isHovered, setIsHovered] = useState(false)  // 默认 false，自动隐藏时先显示触发条
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['ungrouped']))
 
   // 多选状态
@@ -460,15 +460,9 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
     }
   }
 
-  // 自动隐藏模式下的触发区域
-  if (sidebar.mode === 'auto-hide' && !isHovered) {
-    return (
-      <div
-        className="w-2 h-full bg-surface-1 border-r border-surface-2 hover:w-3 transition-all cursor-pointer"
-        onMouseEnter={() => setIsHovered(true)}
-      />
-    )
-  }
+  // 自动隐藏模式下，侧边栏宽度根据 hover 状态变化
+  const effectiveWidth = sidebar.mode === 'auto-hide' && !isHovered ? 16 : sidebar.width
+  const showTrigger = sidebar.mode === 'auto-hide' && !isHovered
 
   // 展开/折叠分组
   const toggleGroupExpand = (groupId: string) => {
@@ -642,54 +636,58 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
   return (
     <div
       ref={sidebarRef}
-      className={`bg-surface-1 border-r border-surface-2 flex flex-col relative ${sidebar.mode === 'auto-hide' ? 'absolute left-0 top-0 h-full z-50' : ''}`}
-      style={{ width: sidebar.width }}
+      className="bg-surface-1 border-r border-surface-2 flex flex-col flex-shrink-0 relative h-full"
+      style={{ width: effectiveWidth }}
+      onMouseEnter={() => sidebar.mode === 'auto-hide' && setIsHovered(true)}
       onMouseLeave={() => sidebar.mode === 'auto-hide' && setIsHovered(false)}
     >
-      {/* 宽度调整手柄 */}
-      <div
-        ref={resizeRef}
-        className={`absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:w-1.5 hover:bg-accent-blue/30 transition-all ${isResizing ? 'bg-accent-blue/50 w-1.5' : ''}`}
-        onMouseDown={handleMouseDown}
-      />
+      {/* 自动隐藏模式下只显示空边条，不渲染任何内容 */}
+      {!showTrigger && (
+        <>
+          {/* 宽度调整手柄 */}
+          <div
+            ref={resizeRef}
+            className={`absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:w-1.5 hover:bg-accent-blue/30 transition-all ${isResizing ? 'bg-accent-blue/50 w-1.5' : ''}`}
+            onMouseDown={handleMouseDown}
+          />
 
-      {/* 标题栏 */}
-      <div className="p-3 flex items-center justify-between border-b border-surface-2">
-        <span className="font-semibold text-text-primary">{t('sidebar.sessions')}</span>
-        <div className="flex items-center gap-1">
-          {sidebar.mode === 'always-show' && (
-            <span className="flex items-center" title={t('sidebar.alwaysShow')}>
-              <Pin size={12} className="text-accent-blue" />
-            </span>
-          )}
-          {/* 模式切换菜单 */}
-          <div className="relative">
-            <button
-              onClick={() => setShowModeMenu(!showModeMenu)}
-              className="p-1 hover:bg-surface-2 rounded text-text-secondary"
-              title={t('sidebar.settings')}
-            >
-              <Settings size={14} />
-            </button>
-            {showModeMenu && (
-              <div className="absolute right-0 top-full mt-1 bg-surface-1 border border-surface-2 rounded-lg shadow-xl py-1 min-w-[140px] z-50">
-                <div className="px-2 py-1 text-xs text-text-muted border-b border-surface-2">{t('sidebar.mode')}</div>
-                {[
-                  { mode: 'always-show' as SidebarMode, label: t('sidebar.alwaysShow'), icon: <Pin size={12} /> },
-                  { mode: 'auto-hide' as SidebarMode, label: t('sidebar.autoHide'), icon: <PanelLeftClose size={12} /> },
-                ].map(item => (
-                  <div
-                    key={item.mode}
-                    className={`px-3 py-2 text-sm text-text-primary hover:bg-surface-2 flex items-center gap-2 cursor-pointer ${sidebar.mode === item.mode ? 'bg-surface-2' : ''}`}
-                    onClick={() => { setSidebarMode(item.mode); setShowModeMenu(false); }}
-                  >
-                    {item.icon}
-                    <span>{item.label}</span>
+          {/* 标题栏 */}
+          <div className="p-3 flex items-center justify-between border-b border-surface-2">
+            <span className="font-semibold text-text-primary">{t('sidebar.sessions')}</span>
+            <div className="flex items-center gap-1">
+              {sidebar.mode === 'always-show' && (
+                <span className="flex items-center" title={t('sidebar.alwaysShow')}>
+                  <Pin size={12} className="text-accent-blue" />
+                </span>
+              )}
+              {/* 模式切换菜单 */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowModeMenu(!showModeMenu)}
+                  className="p-1 hover:bg-surface-2 rounded text-text-secondary"
+                  title={t('sidebar.settings')}
+                >
+                  <Settings size={14} />
+                </button>
+                {showModeMenu && (
+                  <div className="absolute right-0 top-full mt-1 bg-surface-1 border border-surface-2 rounded-lg shadow-xl py-1 min-w-[140px] z-50">
+                    <div className="px-2 py-1 text-xs text-text-muted border-b border-surface-2">{t('sidebar.mode')}</div>
+                    {[
+                      { mode: 'always-show' as SidebarMode, label: t('sidebar.alwaysShow'), icon: <Pin size={12} /> },
+                      { mode: 'auto-hide' as SidebarMode, label: t('sidebar.autoHide'), icon: <PanelLeftClose size={12} /> },
+                    ].map(item => (
+                      <div
+                        key={item.mode}
+                        className={`px-3 py-2 text-sm text-text-primary hover:bg-surface-2 flex items-center gap-2 cursor-pointer ${sidebar.mode === item.mode ? 'bg-surface-2' : ''}`}
+                        onClick={() => { setSidebarMode(item.mode); setShowModeMenu(false); }}
+                      >
+                        {item.icon}
+                        <span>{item.label}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
-            )}
-          </div>
         </div>
       </div>
 
@@ -1136,7 +1134,10 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
           )}
         </div>
       )}
+        </>
+      )}
 
+      {/* 弹窗组件 - 即使侧边栏隐藏时也保持可用 */}
       {showGroups && <GroupManager onClose={() => setShowGroups(false)} />}
       {showCommands && <CommandPanel onClose={() => setShowCommands(false)} />}
       {showQuickConnect && (

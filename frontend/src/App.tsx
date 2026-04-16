@@ -364,7 +364,7 @@ function App() {
       {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
 
       {/* 主内容区 */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
         {/* 侧边栏 */}
         <Sidebar
           onSelectSession={handleSelect}
