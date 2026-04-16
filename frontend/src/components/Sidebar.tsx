@@ -24,6 +24,12 @@ interface ContextMenuState {
   groupMenuMode: 'move' | 'copy' | null
 }
 
+interface GroupContextMenuState {
+  x: number
+  y: number
+  group: GroupNode
+}
+
 type SidebarMode = 'always-show' | 'auto-hide'
 
 export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings, onQuickConnect }: Props) {
@@ -43,6 +49,7 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
+  const [groupContextMenu, setGroupContextMenu] = useState<GroupContextMenuState | null>(null)
   const [isResizing, setIsResizing] = useState(false)
   const [isHovered, setIsHovered] = useState(false)  // 默认 false，自动隐藏时先显示触发条
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['ungrouped']))
@@ -70,12 +77,14 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
       if (contextMenuRef.current && !contextMenuRef.current.contains(e.target as Node)) {
         setContextMenu(null)
       }
+      // 关闭分组右键菜单
+      setGroupContextMenu(null)
     }
-    if (contextMenu) {
+    if (contextMenu || groupContextMenu) {
       document.addEventListener('mousedown', handleClickOutside)
       return () => document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [contextMenu])
+  }, [contextMenu, groupContextMenu])
 
   // 键盘快捷键：Ctrl+A 全选，Escape 取消选择/关闭对话框
   useEffect(() => {
@@ -87,7 +96,22 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
       if (e.key === 'Escape') {
         // 输入框中的 Escape 不拦截（如清除搜索框）
         if (isInputFocused) return
-        // 优先关闭对话框
+        // 优先关闭右键菜单
+        if (contextMenu || groupContextMenu) {
+          e.preventDefault()
+          e.stopPropagation()
+          setContextMenu(null)
+          setGroupContextMenu(null)
+          return
+        }
+        // 关闭模式切换菜单
+        if (showModeMenu) {
+          e.preventDefault()
+          e.stopPropagation()
+          setShowModeMenu(false)
+          return
+        }
+        // 关闭对话框
         if (show) {
           e.preventDefault()
           e.stopPropagation()
@@ -126,7 +150,7 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
     }
     document.addEventListener('keydown', handleKeyDown, true) // 使用 capture 模式
     return () => document.removeEventListener('keydown', handleKeyDown, true)
-  }, [selectedSessions, sessions, show, showGroups, showCommands, showQuickConnect])
+  }, [selectedSessions, sessions, show, showGroups, showCommands, showQuickConnect, showModeMenu, contextMenu, groupContextMenu])
 
   // 点击外部关闭批量分组菜单
   useEffect(() => {
@@ -135,6 +159,14 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
     document.addEventListener('click', handleClick)
     return () => document.removeEventListener('click', handleClick)
   }, [showBatchGroupMenu])
+
+  // 点击外部关闭模式切换菜单
+  useEffect(() => {
+    if (!showModeMenu) return
+    const handleClick = () => setShowModeMenu(false)
+    document.addEventListener('click', handleClick)
+    return () => document.removeEventListener('click', handleClick)
+  }, [showModeMenu])
 
   // 宽度拖拽调整
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -271,6 +303,83 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
     }
 
     setContextMenu({ x, y, session: s, groupMenuMode: null })
+  }
+
+  // 分组右键菜单处理
+  const handleGroupContextMenu = (e: React.MouseEvent, node: GroupNode) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const x = Math.min(e.clientX, window.innerWidth - 160)
+    const y = Math.min(e.clientY, window.innerHeight - 120)
+    setGroupContextMenu({ x, y, group: node })
+  }
+
+  // 新建子目录
+  const handleCreateSubGroup = async () => {
+    if (!groupContextMenu) return
+    const newName = window.prompt(t('sidebar.newGroup'))
+    if (!newName || !newName.trim()) return
+    try {
+      await api.createGroup(newName.trim(), groupContextMenu.group.group.id)
+      loadGroups()
+      loadGroupsTree()
+    } catch (e) {
+      alert(t('group.createFailed') + ': ' + e)
+    }
+    setGroupContextMenu(null)
+  }
+
+  // 连接目录下所有会话
+  const handleConnectAllSessions = () => {
+    if (!groupContextMenu) return
+    // 获取该分组及其所有子分组下的会话
+    const sessionsToConnect: Session[] = []
+    const collectSessions = (node: GroupNode) => {
+      sessionsToConnect.push(...getSessionsByPath(node.group.path))
+      if (node.children) {
+        node.children.forEach(collectSessions)
+      }
+    }
+    collectSessions(groupContextMenu.group)
+    // 逐个连接
+    for (const s of sessionsToConnect) {
+      onDoubleClickSession?.(s.id)
+    }
+    setGroupContextMenu(null)
+  }
+
+  // 删除目录
+  const handleDeleteGroup = async () => {
+    if (!groupContextMenu) return
+    // 检查是否有会话
+    const sessionsInGroup: Session[] = []
+    const collectSessions = (node: GroupNode) => {
+      sessionsInGroup.push(...getSessionsByPath(node.group.path))
+      if (node.children) {
+        node.children.forEach(collectSessions)
+      }
+    }
+    collectSessions(groupContextMenu.group)
+
+    if (sessionsInGroup.length > 0) {
+      const confirmed = await confirmDialog(
+        t('common.confirm'),
+        t('confirm.deleteGroupWithSessions').replace('{count}', String(sessionsInGroup.length))
+      )
+      if (!confirmed) return
+    } else {
+      const confirmed = await confirmDialog(t('common.confirm'), t('confirm.deleteGroup'))
+      if (!confirmed) return
+    }
+
+    try {
+      await api.deleteGroup(groupContextMenu.group.group.id)
+      loadGroups()
+      loadGroupsTree()
+    } catch (e) {
+      alert(t('group.deleteFailed') + ': ' + e)
+    }
+    setGroupContextMenu(null)
   }
 
   // 多选处理
@@ -500,6 +609,36 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
     setExpandedGroups(new Set())
   }
 
+  // 判断是否全部展开
+  const isAllExpanded = () => {
+    if (groupsTree.length === 0 && ungroupedSessions.length === 0) return true
+    const allGroupIds = new Set<string>()
+    groups.forEach(g => allGroupIds.add(g.id))
+    groupsTree.forEach(node => {
+      const collectIds = (n: GroupNode) => {
+        allGroupIds.add(n.group.id)
+        n.children?.forEach(collectIds)
+      }
+      collectIds(node)
+    })
+    if (ungroupedSessions.length > 0) {
+      allGroupIds.add('ungrouped')
+    }
+    for (const id of allGroupIds) {
+      if (!expandedGroups.has(id)) return false
+    }
+    return true
+  }
+
+  // 切换全部展开/折叠
+  const toggleAllGroups = () => {
+    if (isAllExpanded()) {
+      collapseAllGroups()
+    } else {
+      expandAllGroups()
+    }
+  }
+
   // 未分组ID（用于折叠状态管理）
   const ungroupedId = 'ungrouped'
   const isUngroupedExpanded = expandedGroups.has(ungroupedId)
@@ -569,6 +708,7 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
           className="px-3 py-2 text-xs text-text-secondary font-semibold flex items-center gap-1 cursor-pointer hover:bg-surface-2/50 select-none"
           style={{ paddingLeft: `${12 + indent}px` }}
           onClick={() => toggleGroupExpand(g.id)}
+          onContextMenu={(e) => handleGroupContextMenu(e, node)}
         >
           <span className="text-text-muted">
             {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
@@ -600,20 +740,15 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
                     <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getStatusColor(s.id)}`} />
                     <span className="text-sm text-text-primary truncate">{s.name}</span>
                     {sidebarTagSettings.showProtocol && (
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium uppercase ${getProtocolBadgeClass(s.protocol)}`}>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium uppercase flex-shrink-0 ${getProtocolBadgeClass(s.protocol)}`}>
                         {s.protocol}
                       </span>
                     )}
                     {sidebarTagSettings.showAuthType && s.protocol === 'ssh' && (
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${getAuthTypeBadgeClass(s.authType || 'password')}`}>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium flex-shrink-0 ${getAuthTypeBadgeClass(s.authType || 'password')}`}>
                         {getAuthTypeText(s.authType || 'password')}
                       </span>
                     )}
-                  </div>
-                  <div className="flex gap-0.5 flex-shrink-0 opacity-40 group-hover:opacity-100 transition-opacity">
-                    <button onClick={e => { e.stopPropagation(); handleClone(s) }} className="p-1 hover:text-accent-green text-text-muted" title="克隆"><Copy size={14} /></button>
-                    <button onClick={e => { e.stopPropagation(); handleEdit(s) }} className="p-1 hover:text-accent-blue text-text-muted" title="编辑"><Edit3 size={14} /></button>
-                    <button onClick={e => { e.stopPropagation(); handleDelete(s) }} className="p-1 hover:text-accent-red text-text-muted" title="删除"><Trash2 size={14} /></button>
                   </div>
                 </div>
               )
@@ -653,7 +788,7 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
 
           {/* 标题栏 */}
           <div className="p-3 flex items-center justify-between border-b border-surface-2">
-            <span className="font-semibold text-text-primary">{t('sidebar.sessions')}</span>
+            <span title={t('sidebar.sessions')}><Terminal size={18} className="text-accent-red" /></span>
             <div className="flex items-center gap-1">
               {sidebar.mode === 'always-show' && (
                 <span className="flex items-center" title={t('sidebar.alwaysShow')}>
@@ -663,14 +798,14 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
               {/* 模式切换菜单 */}
               <div className="relative">
                 <button
-                  onClick={() => setShowModeMenu(!showModeMenu)}
+                  onClick={e => { e.stopPropagation(); setShowModeMenu(!showModeMenu) }}
                   className="p-1 hover:bg-surface-2 rounded text-text-secondary"
                   title={t('sidebar.settings')}
                 >
                   <Settings size={14} />
                 </button>
                 {showModeMenu && (
-                  <div className="absolute right-0 top-full mt-1 bg-surface-1 border border-surface-2 rounded-lg shadow-xl py-1 min-w-[140px] z-50">
+                  <div className="absolute right-0 top-full mt-1 bg-surface-1 border border-surface-2 rounded-lg shadow-xl py-1 min-w-[140px] z-50" onClick={e => e.stopPropagation()}>
                     <div className="px-2 py-1 text-xs text-text-muted border-b border-surface-2">{t('sidebar.mode')}</div>
                     {[
                       { mode: 'always-show' as SidebarMode, label: t('sidebar.alwaysShow'), icon: <Pin size={12} /> },
@@ -705,20 +840,12 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
       {(groupsTree.length > 0 || ungroupedSessions.length > 0) && (
         <div className="px-2 py-1 flex items-center gap-1 border-b border-surface-2">
           <button
-            onClick={expandAllGroups}
+            onClick={toggleAllGroups}
             className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted hover:text-text-primary hover:bg-surface-2 rounded transition-colors"
-            title={t('sidebar.expandAll')}
+            title={isAllExpanded() ? t('sidebar.collapseAll') : t('sidebar.expandAll')}
           >
-            <ListTree size={14} />
-            <span>{t('sidebar.expandAll')}</span>
-          </button>
-          <button
-            onClick={collapseAllGroups}
-            className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted hover:text-text-primary hover:bg-surface-2 rounded transition-colors"
-            title={t('sidebar.collapseAll')}
-          >
-            <ListMinus size={14} />
-            <span>{t('sidebar.collapseAll')}</span>
+            {isAllExpanded() ? <ListMinus size={14} /> : <ListTree size={14} />}
+            <span>{isAllExpanded() ? t('sidebar.collapseAll') : t('sidebar.expandAll')}</span>
           </button>
         </div>
       )}
@@ -794,11 +921,6 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
                           {getAuthTypeText(s.authType || 'password')}
                         </span>
                       )}
-                    </div>
-                    <div className="flex gap-0.5 flex-shrink-0 opacity-40 group-hover:opacity-100 transition-opacity">
-                      <button onClick={e => { e.stopPropagation(); handleClone(s) }} className="p-1 hover:text-accent-green text-text-muted" title="克隆"><Copy size={14} /></button>
-                      <button onClick={e => { e.stopPropagation(); handleEdit(s) }} className="p-1 hover:text-accent-blue text-text-muted" title="编辑"><Edit3 size={14} /></button>
-                      <button onClick={e => { e.stopPropagation(); handleDelete(s) }} className="p-1 hover:text-accent-red text-text-muted" title="删除"><Trash2 size={14} /></button>
                     </div>
                   </div>
                 )
@@ -1135,6 +1257,35 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
         </div>
       )}
         </>
+      )}
+
+      {/* 分组右键菜单 */}
+      {groupContextMenu && (
+        <div
+          className="fixed bg-surface-1 border border-surface-2 rounded-lg shadow-xl py-1 z-[9999] min-w-[140px]"
+          style={{ left: groupContextMenu.x, top: groupContextMenu.y }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div
+            className="px-3 py-2 text-sm text-text-primary hover:bg-surface-2 flex items-center gap-2 cursor-pointer"
+            onClick={handleCreateSubGroup}
+          >
+            <FolderPlus size={14} /> {t('sidebar.newSubGroup')}
+          </div>
+          <div
+            className="px-3 py-2 text-sm text-text-primary hover:bg-surface-2 flex items-center gap-2 cursor-pointer"
+            onClick={handleConnectAllSessions}
+          >
+            <Terminal size={14} /> {t('sidebar.connectAll')}
+          </div>
+          <div className="border-t border-surface-2 my-1" />
+          <div
+            className="px-3 py-2 text-sm text-accent-red hover:bg-surface-2 flex items-center gap-2 cursor-pointer"
+            onClick={handleDeleteGroup}
+          >
+            <Trash2 size={14} /> {t('sidebar.deleteGroup')}
+          </div>
+        </div>
       )}
 
       {/* 弹窗组件 - 即使侧边栏隐藏时也保持可用 */}

@@ -30,6 +30,19 @@ export function TabBar({ onCloneTab }: Props) {
     }
   }, [contextMenu])
 
+  // ESC 关闭右键菜单
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && contextMenu) {
+        setContextMenu(null)
+      }
+    }
+    if (contextMenu) {
+      document.addEventListener('keydown', handleKeyDown)
+      return () => document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [contextMenu])
+
   const handleContextMenu = (e: React.MouseEvent, tabId: string, sessionId: string) => {
     e.preventDefault()
     e.stopPropagation()

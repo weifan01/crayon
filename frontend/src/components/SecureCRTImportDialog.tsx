@@ -36,6 +36,19 @@ export function SecureCRTImportDialog({ filePath, onClose, onImported }: Props) 
     loadPreview()
   }, [filePath])
 
+  // ESC 关闭对话框
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        e.stopPropagation()
+        onClose()
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown, true)
+    return () => document.removeEventListener('keydown', handleKeyDown, true)
+  }, [onClose])
+
   const loadPreview = async () => {
     setLoading(true)
     setError('')

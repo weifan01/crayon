@@ -97,7 +97,6 @@ function App() {
     const timer = setTimeout(() => {
       if (appRef.current) {
         appRef.current.focus()
-        console.log('App container focused')
       }
     }, 100)
     return () => clearTimeout(timer)

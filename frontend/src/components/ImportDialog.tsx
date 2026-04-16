@@ -58,6 +58,19 @@ export function ImportDialog({ preview, onConfirm, onClose }: ImportDialogProps)
     }
   }, [isDragging])
 
+  // ESC 关闭对话框
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        e.stopPropagation()
+        onClose()
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown, true)
+    return () => document.removeEventListener('keydown', handleKeyDown, true)
+  }, [onClose])
+
   const handleMouseDown = (e: React.MouseEvent) => {
     const rect = (e.currentTarget as HTMLElement).parentElement?.getBoundingClientRect()
     if (rect) {
