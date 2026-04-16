@@ -271,6 +271,65 @@ export namespace main {
 		    return a;
 		}
 	}
+	
+	export class SecureCRTSessionPreview {
+	    name: string;
+	    group: string;
+	    host: string;
+	    port: number;
+	    protocol: string;
+	    username: string;
+	    authType: string;
+	    keyPath: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SecureCRTSessionPreview(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.group = source["group"];
+	        this.host = source["host"];
+	        this.port = source["port"];
+	        this.protocol = source["protocol"];
+	        this.username = source["username"];
+	        this.authType = source["authType"];
+	        this.keyPath = source["keyPath"];
+	    }
+	}
+	export class SecureCRTParseResult {
+	    sessions: SecureCRTSessionPreview[];
+	    groups: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new SecureCRTParseResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.sessions = this.convertValues(source["sessions"], SecureCRTSessionPreview);
+	        this.groups = source["groups"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 
 }
 

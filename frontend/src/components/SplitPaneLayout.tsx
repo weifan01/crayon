@@ -1,8 +1,9 @@
 import { useRef, useEffect, useState, useCallback, useMemo } from 'react'
 import { TerminalPane } from './TerminalPane'
-import { PaneNode, SplitDirection, useTerminalStore } from '../stores/terminalStore'
+import { SplitDirection, useTerminalStore, type PaneNode } from '../stores/terminalStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useLocale } from '../stores/localeStore'
+import { getAllPaneIds } from '../utils/paneUtils'
 import { X, Columns, Rows } from 'lucide-react'
 
 interface Props {
@@ -17,12 +18,6 @@ interface Props {
 function getPaneCount(node: PaneNode): number {
   if (node.type === 'pane') return 1
   return getPaneCount(node.children[0]) + getPaneCount(node.children[1])
-}
-
-// 获取节点下所有 pane 的 id
-function getAllPaneIds(node: PaneNode): string[] {
-  if (node.type === 'pane') return [node.id]
-  return [...getAllPaneIds(node.children[0]), ...getAllPaneIds(node.children[1])]
 }
 
 // Pane 组件 - 不使用 memo，依赖 wrapper div 的 key 来控制 fiber 的稳定性

@@ -520,6 +520,20 @@ func (s *Store) GetGroup(id string) (*Group, error) {
 
 // CreateGroup 创建分组
 func (s *Store) CreateGroup(group *Group) error {
+	// 如果没有 ID，生成一个
+	if group.ID == "" {
+		group.ID = generateSessionID() // 使用同样的 ID 生成逻辑
+	}
+
+	// 设置创建和更新时间
+	now := FlexibleTime{Time: time.Now()}
+	if group.CreatedAt.IsZero() {
+		group.CreatedAt = now
+	}
+	if group.UpdatedAt.IsZero() {
+		group.UpdatedAt = now
+	}
+
 	// 构建完整路径
 	group.Path = s.buildGroupPath(group.ParentID, group.Name)
 

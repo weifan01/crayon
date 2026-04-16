@@ -5,9 +5,10 @@ import { WebLinksAddon } from 'xterm-addon-web-links'
 import { SearchAddon } from '@xterm/addon-search'
 import 'xterm/css/xterm.css'
 import { useSessionStore } from '../stores/sessionStore'
-import { useTerminalStore } from '../stores/terminalStore'
+import { useTerminalStore, type PaneNode } from '../stores/terminalStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useLocale } from '../stores/localeStore'
+import { findPane, paneExistsInTree } from '../utils/paneUtils'
 import { api } from '../api/wails'
 import { TerminalSearchBar } from './TerminalSearchBar'
 
@@ -22,26 +23,9 @@ declare global {
 
 interface Props { tabId: string; paneId: string; isActive: boolean }
 
-// 辅助函数：在节点树中查找 pane 的 sessionId
-function findPaneSessionId(node: any, targetPaneId: string): string | undefined {
-  if (node.type === 'pane') {
-    return node.id === targetPaneId ? node.sessionId : undefined
-  }
-  if (node.children) {
-    return findPaneSessionId(node.children[0], targetPaneId) || findPaneSessionId(node.children[1], targetPaneId)
-  }
-  return undefined
-}
-
-// 辅助函数：检查 paneId 是否存在于节点树中
-function paneExistsInTree(node: any, targetPaneId: string): boolean {
-  if (node.type === 'pane') {
-    return node.id === targetPaneId
-  }
-  if (node.children) {
-    return paneExistsInTree(node.children[0], targetPaneId) || paneExistsInTree(node.children[1], targetPaneId)
-  }
-  return false
+// 辅助函数：在节点树中查找 pane 的 sessionId（使用 paneUtils 的 findPane）
+function findPaneSessionId(node: PaneNode, targetPaneId: string): string | undefined {
+  return findPane(node, targetPaneId)?.sessionId
 }
 
 // 全局终端缓存 - 用于组件重新挂载时恢复终端

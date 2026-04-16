@@ -12,6 +12,12 @@ interface TerminalSettings {
   searchBarPosition: 'top' | 'bottom' // 搜索框位置
 }
 
+// 侧边栏标签显示设置
+interface SidebarTagSettings {
+  showProtocol: boolean      // 显示协议标签
+  showAuthType: boolean      // 显示认证类型标签
+}
+
 // 快捷键配置
 interface ShortcutSettings {
   openSettings: string       // 打开设置
@@ -39,6 +45,7 @@ const defaultBackgroundSettings: BackgroundSettings = {
 interface SettingsState {
   currentTheme: string
   terminalSettings: TerminalSettings
+  sidebarTagSettings: SidebarTagSettings  // 侧边栏标签显示设置
   shortcutSettings: ShortcutSettings
   backgroundSettings: BackgroundSettings
   themes: AppTheme[]  // 所有可用主题列表（预设+自定义）
@@ -53,6 +60,7 @@ interface SettingsState {
   updateCustomTheme: (theme: AppTheme) => void  // 更新自定义主题
   deleteCustomTheme: (themeId: string) => void  // 删除自定义主题
   setTerminalSettings: (settings: Partial<TerminalSettings>) => void
+  setSidebarTagSettings: (settings: Partial<SidebarTagSettings>) => void  // 设置侧边栏标签显示
   setShortcutSettings: (settings: Partial<ShortcutSettings>) => void
   setBackgroundSettings: (settings: Partial<BackgroundSettings>) => void
   applyBackground: () => Promise<void>
@@ -113,6 +121,12 @@ const defaultTerminalSettings: TerminalSettings = {
   searchBarPosition: 'top',             // 搜索框位置默认在顶部
 }
 
+// 默认侧边栏标签设置
+const defaultSidebarTagSettings: SidebarTagSettings = {
+  showProtocol: true,
+  showAuthType: false,
+}
+
 // 加载终端设置
 const loadTerminalSettings = (): TerminalSettings => {
   try {
@@ -133,6 +147,27 @@ const saveTerminalSettings = (settings: TerminalSettings) => {
     localStorage.setItem('terminal-settings', JSON.stringify(settings))
   } catch (e) {
     console.error('Failed to save terminal settings:', e)
+  }
+}
+
+// 加载侧边栏标签设置
+const loadSidebarTagSettings = (): SidebarTagSettings => {
+  try {
+    const saved = localStorage.getItem('sidebar-tag-settings')
+    if (saved) {
+      return { ...defaultSidebarTagSettings, ...JSON.parse(saved) }
+    }
+  } catch (e) {
+    console.error('Failed to load sidebar tag settings:', e)
+  }
+  return defaultSidebarTagSettings
+}
+
+const saveSidebarTagSettings = (settings: SidebarTagSettings) => {
+  try {
+    localStorage.setItem('sidebar-tag-settings', JSON.stringify(settings))
+  } catch (e) {
+    console.error('Failed to save sidebar tag settings:', e)
   }
 }
 
@@ -298,6 +333,7 @@ const initialCustomThemes = loadCustomThemes()
 const allThemes = [...appThemes, ...initialCustomThemes]
 const initialTheme = allThemes.find(t => t.id === savedThemeId) || appThemes[0]
 const initialSettings = loadTerminalSettings()
+const initialSidebarTagSettings = loadSidebarTagSettings()
 const initialShortcuts = loadShortcutSettings()
 const initialBackgroundSettings = loadBackgroundSettings()
 
@@ -319,6 +355,7 @@ if (typeof document !== 'undefined') {
 export const useSettingsStore = create<SettingsState>((set, get) => ({
   currentTheme: savedThemeId,
   terminalSettings: initialSettings,
+  sidebarTagSettings: initialSidebarTagSettings,
   shortcutSettings: initialShortcuts,
   backgroundSettings: initialBackgroundSettings,
   themes: allThemes,
@@ -410,6 +447,12 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     if (settings.uiFontFamily) {
       applyUIFont(settings.uiFontFamily)
     }
+  },
+
+  setSidebarTagSettings: (settings: Partial<SidebarTagSettings>) => {
+    const newSettings = { ...get().sidebarTagSettings, ...settings }
+    saveSidebarTagSettings(newSettings)
+    set({ sidebarTagSettings: newSettings })
   },
 
   setShortcutSettings: (settings: Partial<ShortcutSettings>) => {

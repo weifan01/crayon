@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -870,36 +871,6 @@ func (a *App) ResizeTab(tabId string, cols, rows int) error {
 
 // 保留旧的 Session 连接方法以兼容
 
-// ConnectSession 连接会话
-func (a *App) ConnectSession(sessionID string) error {
-	return a.ConnectSessionWithSize(sessionID, 80, 24)
-}
-
-// ConnectSessionWithSize 带终端大小连接会话
-func (a *App) ConnectSessionWithSize(sessionID string, cols, rows int) error {
-	return a.ConnectTab(sessionID, sessionID, cols, rows)
-}
-
-// DisconnectSession 断开会话
-func (a *App) DisconnectSession(sessionID string) error {
-	return a.DisconnectTab(sessionID)
-}
-
-// GetSessionStatus 获取会话状态
-func (a *App) GetSessionStatus(sessionID string) string {
-	return a.GetTabStatus(sessionID)
-}
-
-// SendToSession 向会话发送数据
-func (a *App) SendToSession(sessionID string, data string) error {
-	return a.SendToTab(sessionID, data)
-}
-
-// ResizeSession 调整会话终端大小
-func (a *App) ResizeSession(sessionID string, cols, rows int) error {
-	return a.ResizeTab(sessionID, cols, rows)
-}
-
 // NeedLocalEcho 查询会话是否需要本地回显
 // Telnet 连接根据协商结果返回，SSH 返回 false，Serial 返回 true
 func (a *App) NeedLocalEcho(tabId string) bool {
@@ -1466,4 +1437,200 @@ func (a *App) ListBackgroundImages() ([]BackgroundFileInfo, error) {
 	}
 
 	return files, nil
+}
+
+// SecureCRTSessionPreview 表示从 SecureCRT 导入的会话预览
+type SecureCRTSessionPreview struct {
+	Name     string `json:"name"`
+	Group    string `json:"group"`
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	Protocol string `json:"protocol"`
+	Username string `json:"username"`
+	AuthType string `json:"authType"`
+	KeyPath  string `json:"keyPath"`
+}
+
+// SecureCRTParseResult 表示 SecureCRT 文件解析结果
+type SecureCRTParseResult struct {
+	Sessions []SecureCRTSessionPreview `json:"sessions"`
+	Groups   []string                  `json:"groups"`
+}
+
+// ParseSecureCRTFile 解析 SecureCRT 导出的 XML 文件
+func (a *App) ParseSecureCRTFile(filePath string) (SecureCRTParseResult, error) {
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return SecureCRTParseResult{}, fmt.Errorf("failed to read file: %w", err)
+	}
+
+	sessions, groups, err := session.ParseSecureCRTXML(string(content))
+	if err != nil {
+		return SecureCRTParseResult{}, err
+	}
+
+	// 转换为预览格式
+	preview := make([]SecureCRTSessionPreview, len(sessions))
+	for i, s := range sessions {
+		preview[i] = SecureCRTSessionPreview{
+			Name:     s.Name,
+			Group:    s.Group,
+			Host:     s.Host,
+			Port:     s.Port,
+			Protocol: s.Protocol,
+			Username: s.Username,
+			AuthType: s.AuthType,
+			KeyPath:  s.KeyPath,
+		}
+	}
+
+	return SecureCRTParseResult{
+		Sessions: preview,
+		Groups:   groups,
+	}, nil
+}
+
+// ImportSecureCRTSessions 导入选中的 SecureCRT 会话
+func (a *App) ImportSecureCRTSessions(sessions []map[string]any) error {
+	// 获取现有分组列表，用于检查分组是否存在
+	existingGroups, err := a.sessionStore.ListGroups()
+	if err != nil {
+		return fmt.Errorf("failed to list groups: %v", err)
+	}
+
+	// 构建分组名称到ID的映射
+	groupNameToID := make(map[string]string)
+	for _, g := range existingGroups {
+		groupNameToID[g.Name] = g.ID
+		// 也用路径作为key，支持多层级分组
+		groupNameToID[g.Path] = g.ID
+	}
+
+	// 用于跟踪本次导入中创建的分组
+	createdGroups := make(map[string]string)
+
+	for _, s := range sessions {
+		name, _ := s["name"].(string)
+		host, _ := s["host"].(string)
+		port := 22
+		if p, ok := s["port"].(int); ok {
+			port = p
+		} else if p, ok := s["port"].(float64); ok {
+			port = int(p)
+		}
+		protocol, _ := s["protocol"].(string)
+		user, _ := s["user"].(string)
+		authType, _ := s["authType"].(string)
+		keyPath, _ := s["keyPath"].(string)
+		groupPath, _ := s["group"].(string)
+
+		// 转换协议类型
+		var proto session.Protocol
+		switch protocol {
+		case "ssh":
+			proto = session.ProtocolSSH
+		case "telnet":
+			proto = session.ProtocolTelnet
+		default:
+			proto = session.ProtocolSSH
+		}
+
+		// 转换认证类型
+		var auth session.AuthType
+		switch authType {
+		case "key":
+			auth = session.AuthTypeKey
+		default:
+			auth = session.AuthTypePassword
+		}
+
+		// 处理分组：检查是否存在，不存在则创建
+		var actualGroupPath string
+		if groupPath != "" {
+			// 先检查是否在现有分组中
+			if id, exists := groupNameToID[groupPath]; exists {
+				// 获取分组的实际路径
+				g, err := a.sessionStore.GetGroup(id)
+				if err == nil && g != nil {
+					actualGroupPath = g.Path
+				}
+			} else if id, exists := createdGroups[groupPath]; exists {
+				// 检查是否在本导入中已创建
+				g, err := a.sessionStore.GetGroup(id)
+				if err == nil && g != nil {
+					actualGroupPath = g.Path
+				}
+			} else {
+				// 需要创建分组（支持多层级路径如 "hk/servers"）
+				parentID := ""
+				parts := strings.Split(groupPath, "/")
+				currentPath := ""
+
+				for _, part := range parts {
+					if currentPath != "" {
+						currentPath = currentPath + "/" + part
+					} else {
+						currentPath = part
+					}
+
+					// 检查这一层分组是否已存在
+					if id, exists := groupNameToID[currentPath]; exists {
+						g, err := a.sessionStore.GetGroup(id)
+						if err == nil && g != nil {
+							parentID = id
+							actualGroupPath = g.Path
+						}
+						continue
+					}
+					if id, exists := createdGroups[currentPath]; exists {
+						g, err := a.sessionStore.GetGroup(id)
+						if err == nil && g != nil {
+							parentID = id
+							actualGroupPath = g.Path
+						}
+						continue
+					}
+
+					// 创建这一层分组
+					newGroup := &session.Group{
+						Name:     part,
+						ParentID: parentID,
+					}
+					err := a.sessionStore.CreateGroup(newGroup)
+					if err != nil {
+						runtime.LogWarning(a.ctx, fmt.Sprintf("Failed to create group %s: %v", currentPath, err))
+					} else {
+						groupNameToID[currentPath] = newGroup.ID
+						createdGroups[currentPath] = newGroup.ID
+						groupNameToID[part] = newGroup.ID // 也用名称映射
+						parentID = newGroup.ID
+						actualGroupPath = newGroup.Path // 使用创建后的实际路径
+						runtime.LogInfo(a.ctx, fmt.Sprintf("Created group: name=%s, path=%s, id=%s", part, newGroup.Path, newGroup.ID))
+					}
+				}
+			}
+		}
+
+		sessionData := &session.Session{
+			Name:        name,
+			Protocol:    proto,
+			Host:        host,
+			Port:        port,
+			User:        user,
+			AuthType:    auth,
+			KeyPath:     keyPath,
+			Password:    "", // 密码清空
+			Group:       actualGroupPath, // 使用分组的实际路径（/hk 格式）
+			Description: "Imported from SecureCRT",
+		}
+
+		runtime.LogInfo(a.ctx, fmt.Sprintf("Creating session: name=%s, group=%s, host=%s", name, actualGroupPath, host))
+
+		err := a.sessionStore.CreateSession(sessionData)
+		if err != nil {
+			runtime.LogWarning(a.ctx, fmt.Sprintf("Failed to create session %s: %v", name, err))
+		}
+	}
+
+	return nil
 }

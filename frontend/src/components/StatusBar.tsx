@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useSessionStore } from '../stores/sessionStore'
 import { useTerminalStore } from '../stores/terminalStore'
 import { useLocale } from '../stores/localeStore'
+import { findPane } from '../utils/paneUtils'
 import { APP_NAME, getAppInfo } from '../version'
 
 // 格式化时长（秒 -> HH:MM:SS）
@@ -18,21 +19,6 @@ function formatDuration(seconds: number): string {
 // 格式化时间（HH:MM:SS）
 function formatTime(date: Date): string {
   return date.toLocaleTimeString('zh-CN', { hour12: false })
-}
-
-// 获取分屏树的 pane 信息
-function getFirstPane(node: any): any {
-  if (node.type === 'pane') return node
-  return getFirstPane(node.children[0])
-}
-
-function findPane(node: any, paneId: string): any {
-  if (node.type === 'pane') {
-    return node.id === paneId ? node : undefined
-  }
-  const left = findPane(node.children[0], paneId)
-  if (left) return left
-  return findPane(node.children[1], paneId)
 }
 
 export function StatusBar() {

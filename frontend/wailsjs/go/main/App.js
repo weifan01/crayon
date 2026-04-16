@@ -22,14 +22,6 @@ export function ConfirmDialog(arg1, arg2) {
   return window['go']['main']['App']['ConfirmDialog'](arg1, arg2);
 }
 
-export function ConnectSession(arg1) {
-  return window['go']['main']['App']['ConnectSession'](arg1);
-}
-
-export function ConnectSessionWithSize(arg1, arg2, arg3) {
-  return window['go']['main']['App']['ConnectSessionWithSize'](arg1, arg2, arg3);
-}
-
 export function ConnectTab(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['ConnectTab'](arg1, arg2, arg3, arg4);
 }
@@ -68,10 +60,6 @@ export function DeleteSession(arg1) {
 
 export function DeleteTemplate(arg1) {
   return window['go']['main']['App']['DeleteTemplate'](arg1);
-}
-
-export function DisconnectSession(arg1) {
-  return window['go']['main']['App']['DisconnectSession'](arg1);
 }
 
 export function DisconnectTab(arg1) {
@@ -126,10 +114,6 @@ export function GetSession(arg1) {
   return window['go']['main']['App']['GetSession'](arg1);
 }
 
-export function GetSessionStatus(arg1) {
-  return window['go']['main']['App']['GetSessionStatus'](arg1);
-}
-
 export function GetTabStatus(arg1) {
   return window['go']['main']['App']['GetTabStatus'](arg1);
 }
@@ -144,6 +128,10 @@ export function ImportConfig(arg1) {
 
 export function ImportConfigWithOptions(arg1, arg2) {
   return window['go']['main']['App']['ImportConfigWithOptions'](arg1, arg2);
+}
+
+export function ImportSecureCRTSessions(arg1) {
+  return window['go']['main']['App']['ImportSecureCRTSessions'](arg1);
 }
 
 export function ListBackgroundImages() {
@@ -190,6 +178,10 @@ export function NeedLocalEcho(arg1) {
   return window['go']['main']['App']['NeedLocalEcho'](arg1);
 }
 
+export function ParseSecureCRTFile(arg1) {
+  return window['go']['main']['App']['ParseSecureCRTFile'](arg1);
+}
+
 export function PreviewImport(arg1) {
   return window['go']['main']['App']['PreviewImport'](arg1);
 }
@@ -208,10 +200,6 @@ export function ReadFileString(arg1) {
 
 export function ReadLogFile(arg1) {
   return window['go']['main']['App']['ReadLogFile'](arg1);
-}
-
-export function ResizeSession(arg1, arg2, arg3) {
-  return window['go']['main']['App']['ResizeSession'](arg1, arg2, arg3);
 }
 
 export function ResizeTab(arg1, arg2, arg3) {
@@ -244,10 +232,6 @@ export function SelectFile(arg1, arg2, arg3) {
 
 export function SelectFiles(arg1, arg2, arg3) {
   return window['go']['main']['App']['SelectFiles'](arg1, arg2, arg3);
-}
-
-export function SendToSession(arg1, arg2) {
-  return window['go']['main']['App']['SendToSession'](arg1, arg2);
 }
 
 export function SendToTab(arg1, arg2) {

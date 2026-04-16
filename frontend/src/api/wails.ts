@@ -124,6 +124,18 @@ export interface ImportPreview {
   duplicateCount: number
 }
 
+// SecureCRT 导入预览
+export interface SecureCRTSessionPreview {
+  name: string
+  group: string
+  host: string
+  port: number
+  protocol: string
+  username: string
+  authType: string
+  keyPath: string
+}
+
 export interface ImportSessionPreview {
   id: string
   name: string
@@ -213,6 +225,12 @@ export const api = {
   importConfig: (jsonData: string): Promise<void> => getWailsAPI().ImportConfig(jsonData),
   importConfigWithOptions: (jsonData: string, options: ImportOptions): Promise<void> =>
     getWailsAPI().ImportConfigWithOptions(jsonData, options),
+
+  // SecureCRT 导入
+  parseSecureCRTFile: (filePath: string): Promise<{ sessions: SecureCRTSessionPreview[], groups: string[] }> =>
+    getWailsAPI().ParseSecureCRTFile(filePath),
+  importSecureCRTSessions: (sessions: Record<string, any>[]): Promise<void> =>
+    getWailsAPI().ImportSecureCRTSessions(sessions),
 
   // 文件操作
   saveFile: (title: string, defaultFilename: string, defaultPath: string): Promise<string> =>

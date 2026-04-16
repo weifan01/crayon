@@ -2,37 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { AlertCircle, Check, X, SkipForward, RefreshCw, FileText, Server, Terminal } from 'lucide-react'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useLocale } from '../stores/localeStore'
-
-interface ImportSessionPreview {
-  id: string
-  name: string
-  host: string
-  protocol: string
-  isNew: boolean
-  existsName: string
-}
-
-interface ImportCommandPreview {
-  id: string
-  name: string
-  content: string
-  isNew: boolean
-}
-
-interface ImportPreview {
-  sessions: ImportSessionPreview[]
-  commands: ImportCommandPreview[]
-  totalSessions: number
-  totalCommands: number
-  newSessions: number
-  duplicateCount: number
-}
-
-interface ImportOptions {
-  sessionMode: 'skip' | 'overwrite' | 'rename'
-  commandMode: 'skip' | 'overwrite' | 'rename'
-  selectedIds: string[]
-}
+import type { ImportSessionPreview, ImportCommandPreview, ImportPreview, ImportOptions } from '../api/wails'
 
 interface ImportDialogProps {
   preview: ImportPreview

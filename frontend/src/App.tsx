@@ -10,6 +10,7 @@ import { useSessionStore } from './stores/sessionStore'
 import { useTerminalStore, SplitDirection } from './stores/terminalStore'
 import { useSettingsStore } from './stores/settingsStore'
 import { useLocale } from './stores/localeStore'
+import { getAllPaneIds } from './utils/paneUtils'
 import { api } from './api/wails'
 import { Zap } from 'lucide-react'
 import { APP_NAME } from './version'
@@ -67,12 +68,6 @@ function matchShortcut(e: KeyboardEvent, shortcutStr: string): boolean {
   }
 
   return true
-}
-
-// 获取分屏树中所有 pane 的 ID
-function getAllPaneIds(node: any): string[] {
-  if (node.type === 'pane') return [node.id]
-  return [...getAllPaneIds(node.children[0]), ...getAllPaneIds(node.children[1])]
 }
 
 function App() {
@@ -142,6 +137,8 @@ function App() {
           e.stopPropagation()
           return
         }
+        // 没有对话框时，阻止 ESC 键的默认行为（如退出全屏）
+        e.preventDefault()
       }
 
       // 检查是否在设置面板的输入框中（通过 class 检查）

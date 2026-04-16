@@ -16,10 +16,6 @@ export function CloneSession(arg1:string):Promise<session.Session>;
 
 export function ConfirmDialog(arg1:string,arg2:string):Promise<boolean>;
 
-export function ConnectSession(arg1:string):Promise<void>;
-
-export function ConnectSessionWithSize(arg1:string,arg2:number,arg3:number):Promise<void>;
-
 export function ConnectTab(arg1:string,arg2:string,arg3:number,arg4:number):Promise<void>;
 
 export function CreateCommand(arg1:command.Command):Promise<void>;
@@ -39,8 +35,6 @@ export function DeleteGroup(arg1:string):Promise<void>;
 export function DeleteSession(arg1:string):Promise<void>;
 
 export function DeleteTemplate(arg1:string):Promise<void>;
-
-export function DisconnectSession(arg1:string):Promise<void>;
 
 export function DisconnectTab(arg1:string):Promise<void>;
 
@@ -68,8 +62,6 @@ export function GetLogList():Promise<Array<logger.LogFileInfo>>;
 
 export function GetSession(arg1:string):Promise<session.Session>;
 
-export function GetSessionStatus(arg1:string):Promise<string>;
-
 export function GetTabStatus(arg1:string):Promise<string>;
 
 export function GetTemplate(arg1:string):Promise<session.PersonalizationTemplate>;
@@ -77,6 +69,8 @@ export function GetTemplate(arg1:string):Promise<session.PersonalizationTemplate
 export function ImportConfig(arg1:string):Promise<void>;
 
 export function ImportConfigWithOptions(arg1:string,arg2:main.ImportOptions):Promise<void>;
+
+export function ImportSecureCRTSessions(arg1:Array<Record<string, any>>):Promise<void>;
 
 export function ListBackgroundImages():Promise<Array<main.BackgroundFileInfo>>;
 
@@ -100,6 +94,8 @@ export function MoveGroup(arg1:string,arg2:string):Promise<void>;
 
 export function NeedLocalEcho(arg1:string):Promise<boolean>;
 
+export function ParseSecureCRTFile(arg1:string):Promise<main.SecureCRTParseResult>;
+
 export function PreviewImport(arg1:string):Promise<main.ImportPreview>;
 
 export function ReadFile(arg1:string):Promise<Array<number>>;
@@ -109,8 +105,6 @@ export function ReadFileBase64(arg1:string):Promise<string>;
 export function ReadFileString(arg1:string):Promise<string>;
 
 export function ReadLogFile(arg1:string):Promise<string>;
-
-export function ResizeSession(arg1:string,arg2:number,arg3:number):Promise<void>;
 
 export function ResizeTab(arg1:string,arg2:number,arg3:number):Promise<void>;
 
@@ -127,8 +121,6 @@ export function SelectDirectory(arg1:string,arg2:string):Promise<string>;
 export function SelectFile(arg1:string,arg2:string,arg3:string):Promise<string>;
 
 export function SelectFiles(arg1:string,arg2:string,arg3:string):Promise<Array<string>>;
-
-export function SendToSession(arg1:string,arg2:string):Promise<void>;
 
 export function SendToTab(arg1:string,arg2:string):Promise<void>;
 

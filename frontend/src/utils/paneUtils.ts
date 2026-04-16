@@ -1,8 +1,12 @@
 import { api } from '../api/wails'
-import type { PaneNode } from '../stores/terminalStore'
 
-// 重导出 PaneNode 类型供其他组件使用
-export type { PaneNode } from '../stores/terminalStore'
+// 分屏方向
+export type SplitDirection = 'horizontal' | 'vertical'
+
+// 分屏节点类型 - 统一在此定义
+export type PaneNode =
+  | { type: 'pane'; id: string; sessionId: string; title: string; cols: number; rows: number }
+  | { type: 'split'; id: string; direction: SplitDirection; children: [PaneNode, PaneNode]; ratio: number }
 
 // Pane 类型 - 用于获取 pane 特定属性
 type PaneType = Extract<PaneNode, { type: 'pane' }>
@@ -31,6 +35,16 @@ export function getAllPaneSessionIds(node: PaneNode): string[] {
 export function paneExistsInTree(node: PaneNode, targetPaneId: string): boolean {
   if (node.type === 'pane') return node.id === targetPaneId
   return paneExistsInTree(node.children[0], targetPaneId) || paneExistsInTree(node.children[1], targetPaneId)
+}
+
+// 查找指定 paneId 的 pane 节点
+export function findPane(node: PaneNode, paneId: string): PaneType | undefined {
+  if (node.type === 'pane') {
+    return node.id === paneId ? node : undefined
+  }
+  const left = findPane(node.children[0], paneId)
+  if (left) return left
+  return findPane(node.children[1], paneId)
 }
 
 // MIME 类型映射 - 统一处理图片类型

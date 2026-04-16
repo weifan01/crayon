@@ -1,15 +1,11 @@
 import { create } from 'zustand'
+import { getFirstPane, getAllPaneIds, type PaneNode, type SplitDirection } from '../utils/paneUtils'
 
-// 分屏方向
-export type SplitDirection = 'horizontal' | 'vertical'
+// 重导出类型供其他组件使用
+export type { PaneNode, SplitDirection } from '../utils/paneUtils'
 
 // 最大分屏数量
 const MAX_PANE_COUNT = 6
-
-// 分屏节点类型
-export type PaneNode =
-  | { type: 'pane'; id: string; sessionId: string; title: string; cols: number; rows: number }
-  | { type: 'split'; id: string; direction: SplitDirection; children: [PaneNode, PaneNode]; ratio: number }
 
 // 标签页
 export interface Tab {
@@ -74,20 +70,6 @@ function removePane(node: PaneNode, paneId: string): PaneNode | null {
   if (!left) return right
   if (!right) return left
   return { ...node, children: [left, right] }
-}
-
-// 获取所有 pane 的 ID
-function getAllPaneIds(node: PaneNode): string[] {
-  if (node.type === 'pane') {
-    return [node.id]
-  }
-  return [...getAllPaneIds(node.children[0]), ...getAllPaneIds(node.children[1])]
-}
-
-// 获取第一个 pane
-function getFirstPane(node: PaneNode): PaneNode {
-  if (node.type === 'pane') return node
-  return getFirstPane(node.children[0])
 }
 
 export const useTerminalStore = create<State>((set, get) => ({

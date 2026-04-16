@@ -42,8 +42,18 @@ func (a *KeyAuth) Authenticate() (ssh.AuthMethod, error) {
 		return nil, errors.New("key path is empty")
 	}
 
+	// 处理 ~ 符号，展开为用户家目录
+	keyPath := a.KeyPath
+	if len(keyPath) > 0 && keyPath[0] == '~' {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get home directory: %w", err)
+		}
+		keyPath = filepath.Join(homeDir, keyPath[1:])
+	}
+
 	// 读取密钥文件内容
-	keyBytes, err := os.ReadFile(a.KeyPath)
+	keyBytes, err := os.ReadFile(keyPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read key file: %w", err)
 	}

@@ -3,7 +3,7 @@ import { useSessionStore } from '../stores/sessionStore'
 import { useSidebarSettings } from '../stores/sidebarSettingsStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useLocale } from '../stores/localeStore'
-import { Plus, Folder, Server, Edit3, Trash2, Copy, MoveRight, ChevronRight, ChevronDown, PanelLeftClose, Pin, GripVertical, Settings, FolderPlus, Terminal, Zap, X, CheckSquare, Key, Globe, Cpu, ListTree, ListMinus, Sliders } from 'lucide-react'
+import { Plus, Folder, Server, Edit3, Trash2, Copy, MoveRight, ChevronRight, ChevronDown, PanelLeftClose, Pin, GripVertical, Settings, FolderPlus, Terminal, Zap, X, Key, Globe, Cpu, ListTree, ListMinus, Sliders } from 'lucide-react'
 import type { Session, GroupNode } from '../api/wails'
 import { api } from '../api/wails'
 import { GroupManager } from './GroupManager'
@@ -29,7 +29,7 @@ type SidebarMode = 'always-show' | 'auto-hide'
 export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings, onQuickConnect }: Props) {
   const { sessions, groups, groupsTree, loading, loadSessions, loadGroups, loadGroupsTree, createSession, updateSession, deleteSession, cloneSession, searchSessions, getSessionStatus, confirmDialog } = useSessionStore()
   const { sidebar, setSidebarWidth, setSidebarMode } = useSidebarSettings()
-  const { themes } = useSettingsStore()
+  const { themes, sidebarTagSettings, setSidebarTagSettings } = useSettingsStore()
   const { t } = useLocale()
 
   const [kw, setKw] = useState('')
@@ -50,6 +50,7 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
   // 多选状态
   const [selectedSessions, setSelectedSessions] = useState<Set<string>>(new Set())
   const [lastClickedId, setLastClickedId] = useState<string | null>(null)
+  const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null)
   const [showBatchGroupMenu, setShowBatchGroupMenu] = useState(false)
 
   // 拖拽状态
@@ -146,7 +147,7 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
 
     const handleMouseMove = (e: MouseEvent) => {
       const newWidth = e.clientX
-      if (newWidth >= 180 && newWidth <= 400) {
+      if (newWidth >= 180 && newWidth <= 600) {
         setSidebarWidth(newWidth)
       }
     }
@@ -276,6 +277,10 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
   const handleSessionClick = (e: React.MouseEvent, s: Session) => {
     setContextMenu(null)
 
+    // 获取当前显示顺序的会话列表
+    const visibleSessions = getVisibleSessionsInOrder()
+    const currentIndex = visibleSessions.findIndex(sess => sess.id === s.id)
+
     if (e.ctrlKey || e.metaKey) {
       // Ctrl/Cmd + 点击：切换选中状态
       setSelectedSessions(prev => {
@@ -288,20 +293,20 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
         return next
       })
       setLastClickedId(s.id)
-    } else if (e.shiftKey && lastClickedId) {
-      // Shift + 点击：范围选择
-      const currentIndex = sessions.findIndex(sess => sess.id === s.id)
-      const lastIndex = sessions.findIndex(sess => sess.id === lastClickedId)
-      if (currentIndex !== -1 && lastIndex !== -1) {
-        const start = Math.min(currentIndex, lastIndex)
-        const end = Math.max(currentIndex, lastIndex)
-        const idsToSelect = sessions.slice(start, end + 1).map(sess => sess.id)
+      setLastClickedIndex(currentIndex)
+    } else if (e.shiftKey && lastClickedId !== null && lastClickedIndex !== null) {
+      // Shift + 点击：范围选择（使用显示顺序）
+      if (currentIndex !== -1 && lastClickedIndex !== -1) {
+        const start = Math.min(currentIndex, lastClickedIndex)
+        const end = Math.max(currentIndex, lastClickedIndex)
+        const idsToSelect = visibleSessions.slice(start, end + 1).map(sess => sess.id)
         setSelectedSessions(new Set(idsToSelect))
       }
     } else {
       // 普通点击：只选中当前（不连接）
       setSelectedSessions(new Set([s.id]))
       setLastClickedId(s.id)
+      setLastClickedIndex(currentIndex)
       // 单击只选中，双击才连接
     }
   }
@@ -310,11 +315,13 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
   const clearSelection = () => {
     setSelectedSessions(new Set())
     setLastClickedId(null)
+    setLastClickedIndex(null)
   }
 
-  // 全选
+  // 全选（仅选择当前可见的会话）
   const selectAll = () => {
-    setSelectedSessions(new Set(sessions.map(s => s.id)))
+    const visibleSessions = getVisibleSessionsInOrder()
+    setSelectedSessions(new Set(visibleSessions.map(s => s.id)))
   }
 
   // 批量移动到分组
@@ -429,6 +436,30 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
     }
   }
 
+  // 获取认证类型徽章样式
+  const getAuthTypeBadgeClass = (authType: string) => {
+    switch (authType) {
+      case 'password':
+        return 'bg-purple-500/20 text-purple-400'
+      case 'key':
+        return 'bg-cyan-500/20 text-cyan-400'
+      default:
+        return 'bg-surface-2 text-text-muted'
+    }
+  }
+
+  // 获取认证类型显示文本
+  const getAuthTypeText = (authType: string) => {
+    switch (authType) {
+      case 'password':
+        return t('session.password')
+      case 'key':
+        return t('session.publicKey')
+      default:
+        return authType
+    }
+  }
+
   // 自动隐藏模式下的触发区域
   if (sidebar.mode === 'auto-hide' && !isHovered) {
     return (
@@ -496,6 +527,38 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
     return directSessions + childSessions
   }
 
+  // 获取按 UI 显示顺序排列的可见会话列表（考虑分组展开状态）
+  const getVisibleSessionsInOrder = useCallback((): Session[] => {
+    const orderedSessions: Session[] = []
+    const ungroupedId = 'ungrouped'
+
+    // 递归收集展开分组下的会话
+    const collectSessionsFromNode = (node: GroupNode) => {
+      // 如果分组展开，添加直接会话
+      if (expandedGroups.has(node.group.id)) {
+        orderedSessions.push(...getSessionsByPath(node.group.path))
+        // 继续处理子分组
+        if (node.children) {
+          for (const child of node.children) {
+            collectSessionsFromNode(child)
+          }
+        }
+      }
+    }
+
+    // 按分组树顺序收集
+    for (const node of groupsTree) {
+      collectSessionsFromNode(node)
+    }
+
+    // 添加未分组会话（如果展开）
+    if (expandedGroups.has(ungroupedId)) {
+      orderedSessions.push(...sessions.filter(s => !s.group || s.group === ''))
+    }
+
+    return orderedSessions
+  }, [sessions, groupsTree, expandedGroups])
+
   // 递归渲染树形分组
   const renderGroupNode = (node: GroupNode, depth: number = 0): React.ReactNode => {
     const g = node.group
@@ -542,9 +605,16 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getStatusColor(s.id)}`} />
                     <span className="text-sm text-text-primary truncate">{s.name}</span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium uppercase ${getProtocolBadgeClass(s.protocol)}`}>
-                      {s.protocol}
-                    </span>
+                    {sidebarTagSettings.showProtocol && (
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium uppercase ${getProtocolBadgeClass(s.protocol)}`}>
+                        {s.protocol}
+                      </span>
+                    )}
+                    {sidebarTagSettings.showAuthType && s.protocol === 'ssh' && (
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${getAuthTypeBadgeClass(s.authType || 'password')}`}>
+                        {getAuthTypeText(s.authType || 'password')}
+                      </span>
+                    )}
                   </div>
                   <div className="flex gap-0.5 flex-shrink-0 opacity-40 group-hover:opacity-100 transition-opacity">
                     <button onClick={e => { e.stopPropagation(); handleClone(s) }} className="p-1 hover:text-accent-green text-text-muted" title="克隆"><Copy size={14} /></button>
@@ -716,9 +786,16 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getStatusColor(s.id)}`} />
                       <span className="text-sm text-text-primary truncate">{s.name}</span>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium uppercase ${getProtocolBadgeClass(s.protocol)}`}>
-                        {s.protocol}
-                      </span>
+                      {sidebarTagSettings.showProtocol && (
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium uppercase ${getProtocolBadgeClass(s.protocol)}`}>
+                          {s.protocol}
+                        </span>
+                      )}
+                      {sidebarTagSettings.showAuthType && s.protocol === 'ssh' && (
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${getAuthTypeBadgeClass(s.authType || 'password')}`}>
+                          {getAuthTypeText(s.authType || 'password')}
+                        </span>
+                      )}
                     </div>
                     <div className="flex gap-0.5 flex-shrink-0 opacity-40 group-hover:opacity-100 transition-opacity">
                       <button onClick={e => { e.stopPropagation(); handleClone(s) }} className="p-1 hover:text-accent-green text-text-muted" title="克隆"><Copy size={14} /></button>

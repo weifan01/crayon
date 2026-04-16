@@ -8,6 +8,7 @@ import { uiFonts } from '../stores/settingsStore'
 import { getAppInfo, AUTHOR_INFO, AI_INFO, AppInfo } from '../version'
 import { LogViewer } from './LogViewer'
 import { ImportDialog } from './ImportDialog'
+import { SecureCRTImportDialog } from './SecureCRTImportDialog'
 import { BackgroundSettingsPanel } from './BackgroundSettingsPanel'
 import { BackgroundImageSelector } from './BackgroundImageSelector'
 import { api, PersonalizationTemplate, Session } from '../api/wails'
@@ -116,7 +117,7 @@ function ShortcutRecorder({
 }
 
 export function SettingsPanel({ onClose }: Props) {
-  const { terminalSettings, setTerminalSettings, shortcutSettings, setShortcutSettings, currentTheme, setTheme, getTheme, themes, customThemes, isCustomTheme, createCustomTheme, updateCustomTheme, deleteCustomTheme } = useSettingsStore()
+  const { terminalSettings, setTerminalSettings, sidebarTagSettings, setSidebarTagSettings, shortcutSettings, setShortcutSettings, currentTheme, setTheme, getTheme, themes, customThemes, isCustomTheme, createCustomTheme, updateCustomTheme, deleteCustomTheme } = useSettingsStore()
   const { exportConfigWithOptions, previewImport, importConfigWithOptions, confirmDialog } = useSessionStore()
   const { language, setLanguage, t } = useLocale()
   const [activeTab, setActiveTab] = useState<TabId>('terminal')
@@ -132,6 +133,8 @@ export function SettingsPanel({ onClose }: Props) {
   const [showImportDialog, setShowImportDialog] = useState(false)
   const [importPreview, setImportPreview] = useState<any>(null)
   const [importData, setImportData] = useState<string>('')
+  const [showSecureCRTImport, setShowSecureCRTImport] = useState(false)
+  const [secureCRTFilePath, setSecureCRTFilePath] = useState<string>('')
   const [appInfo, setAppInfo] = useState<AppInfo | null>(null)
   const terminalFontDropdownRef = useRef<HTMLDivElement>(null)
   const uiFontDropdownRef = useRef<HTMLDivElement>(null)
@@ -531,6 +534,24 @@ export function SettingsPanel({ onClose }: Props) {
     }
   }
 
+  const handleSecureCRTImport = async () => {
+    try {
+      const filePath = await api.selectFile(t('data.securecrtSelectFile'), '', 'XML Files:*.xml')
+      if (!filePath) {
+        return
+      }
+      setSecureCRTFilePath(filePath)
+      setShowSecureCRTImport(true)
+    } catch (e) {
+      console.error('SecureCRT import error:', e)
+      alert(String(e))
+    }
+  }
+
+  const handleSecureCRTImported = () => {
+    window.location.reload()
+  }
+
   const tabs = [
     { id: 'terminal' as TabId, label: t('settings.terminal'), icon: Monitor },
     { id: 'theme' as TabId, label: t('settings.theme'), icon: Palette },
@@ -701,6 +722,73 @@ export function SettingsPanel({ onClose }: Props) {
                       style={{
                         backgroundColor: '#fff',
                         transform: terminalSettings.pasteOnRightClick ? 'translateX(22px)' : 'translateX(4px)'
+                      }}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {/* 侧边栏标签显示设置 */}
+              <h3 className="text-sm font-medium mb-4 mt-6" style={{ color: theme.ui.textSecondary }}>
+                {t('sidebar.tagDisplay')}
+              </h3>
+
+              <div className="space-y-3">
+                <div
+                  className="flex items-center justify-between p-4 rounded-xl"
+                  style={{ backgroundColor: theme.ui.surface1 }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg" style={{ backgroundColor: theme.ui.surface2 }}>
+                      <Server size={18} style={{ color: theme.ui.accent }} />
+                    </div>
+                    <div>
+                      <div className="font-medium" style={{ color: theme.ui.textPrimary }}>{t('sidebar.showProtocolTag')}</div>
+                      <div className="text-xs mt-0.5" style={{ color: theme.ui.textMuted }}>
+                        {t('sidebar.showProtocolTagDesc')}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setSidebarTagSettings({ showProtocol: !sidebarTagSettings.showProtocol })}
+                    className="relative w-11 h-6 rounded-full transition-colors duration-200"
+                    style={{ backgroundColor: sidebarTagSettings.showProtocol ? theme.ui.accent : theme.ui.surface3 }}
+                  >
+                    <div
+                      className="absolute top-1 w-4 h-4 rounded-full transition-transform duration-200"
+                      style={{
+                        backgroundColor: '#fff',
+                        transform: sidebarTagSettings.showProtocol ? 'translateX(22px)' : 'translateX(4px)'
+                      }}
+                    />
+                  </button>
+                </div>
+
+                <div
+                  className="flex items-center justify-between p-4 rounded-xl"
+                  style={{ backgroundColor: theme.ui.surface1 }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg" style={{ backgroundColor: theme.ui.surface2 }}>
+                      <Shield size={18} style={{ color: theme.ui.accent }} />
+                    </div>
+                    <div>
+                      <div className="font-medium" style={{ color: theme.ui.textPrimary }}>{t('sidebar.showAuthTypeTag')}</div>
+                      <div className="text-xs mt-0.5" style={{ color: theme.ui.textMuted }}>
+                        {t('sidebar.showAuthTypeTagDesc')}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setSidebarTagSettings({ showAuthType: !sidebarTagSettings.showAuthType })}
+                    className="relative w-11 h-6 rounded-full transition-colors duration-200"
+                    style={{ backgroundColor: sidebarTagSettings.showAuthType ? theme.ui.accent : theme.ui.surface3 }}
+                  >
+                    <div
+                      className="absolute top-1 w-4 h-4 rounded-full transition-transform duration-200"
+                      style={{
+                        backgroundColor: '#fff',
+                        transform: sidebarTagSettings.showAuthType ? 'translateX(22px)' : 'translateX(4px)'
                       }}
                     />
                   </button>
@@ -1736,6 +1824,33 @@ export function SettingsPanel({ onClose }: Props) {
                   </div>
                 </div>
 
+                {/* SecureCRT 导入 */}
+                <div
+                  className="p-4 rounded-xl"
+                  style={{ backgroundColor: theme.ui.surface1 }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg" style={{ backgroundColor: theme.ui.surface2 }}>
+                        <Server size={18} style={{ color: theme.ui.accent }} />
+                      </div>
+                      <div>
+                        <div className="font-medium" style={{ color: theme.ui.textPrimary }}>{t('data.securecrtImport')}</div>
+                        <div className="text-xs mt-0.5" style={{ color: theme.ui.textMuted }}>
+                          {t('data.securecrtImportDesc')}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleSecureCRTImport}
+                      className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                      style={{ backgroundColor: theme.ui.surface2, color: theme.ui.textPrimary }}
+                    >
+                      {t('common.import')}
+                    </button>
+                  </div>
+                </div>
+
                 {/* 会话日志 */}
                 <div
                   className="p-4 rounded-xl"
@@ -1876,6 +1991,18 @@ export function SettingsPanel({ onClose }: Props) {
             setImportPreview(null)
             setImportData('')
           }}
+        />
+      )}
+
+      {/* SecureCRT 导入对话框 */}
+      {showSecureCRTImport && secureCRTFilePath && (
+        <SecureCRTImportDialog
+          filePath={secureCRTFilePath}
+          onClose={() => {
+            setShowSecureCRTImport(false)
+            setSecureCRTFilePath('')
+          }}
+          onImported={handleSecureCRTImported}
         />
       )}
 
