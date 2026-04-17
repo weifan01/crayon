@@ -10,7 +10,7 @@ interface Props {
 }
 
 export function TabBar({ onCloneTab }: Props) {
-  const { tabs, activeTabId, setActiveTab, closeTab, closePane, splitPane, getTab } = useTerminalStore()
+  const { tabs, activeTabId, setActiveTab, closeTab, splitPane, getTab } = useTerminalStore()
   const { getTabStatus, disconnectTab, cleanupTab, confirmDialog } = useSessionStore()
   const { t } = useLocale()
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; tabId: string; sessionId: string } | null>(null)

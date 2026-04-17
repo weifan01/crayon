@@ -12,7 +12,7 @@ interface TerminalSearchBarProps {
   terminalBackground: string
 }
 
-export function TerminalSearchBar({ paneId, searchAddon, onClose, position, terminalBackground }: TerminalSearchBarProps) {
+export function TerminalSearchBar({ searchAddon, onClose, position, terminalBackground }: TerminalSearchBarProps) {
   const [query, setQuery] = useState('')
   const [caseSensitive, setCaseSensitive] = useState(false)
   const [wholeWord, setWholeWord] = useState(false)

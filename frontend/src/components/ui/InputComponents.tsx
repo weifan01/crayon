@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { useSettingsStore } from '../../stores/settingsStore'
-import { useLocale } from '../../stores/localeStore'
 import type { AppTheme } from '../themes'
 
 // 滑块输入组件（动态渐变背景 + 数字输入框 + 单位标签）
@@ -228,7 +227,6 @@ export function FontSelector({
 }: FontSelectorProps) {
   const storeTheme = useSettingsStore.getState().getTheme()
   const theme = themeOverride || storeTheme
-  const { t } = useLocale()
   const [showDropdown, setShowDropdown] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 

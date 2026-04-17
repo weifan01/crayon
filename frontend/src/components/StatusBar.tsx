@@ -22,7 +22,7 @@ function formatTime(date: Date): string {
 }
 
 export function StatusBar() {
-  const { tabs, activeTabId, getTab } = useTerminalStore()
+  const { activeTabId, getTab } = useTerminalStore()
   const { sessions, getTabStatus, getConnectionDuration } = useSessionStore()
   const { t } = useLocale()
   const [currentTime, setCurrentTime] = useState(new Date())

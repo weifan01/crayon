@@ -420,11 +420,6 @@ export const appThemes: AppTheme[] = [
   },
 ]
 
-// 根据主题 ID 获取主题
-export function getThemeById(id: string): AppTheme {
-  return appThemes.find(t => t.id === id) || appThemes[0]
-}
-
 // 将主题转换为 CSS 变量
 export function themeToCssVariables(theme: AppTheme): Record<string, string> {
   const vars: Record<string, string> = {
@@ -494,5 +489,3 @@ export function toTerminalTheme(theme: AppTheme): TerminalTheme {
   }
 }
 
-// 兼容旧版导出
-export const defaultThemes: TerminalTheme[] = appThemes.map(toTerminalTheme)

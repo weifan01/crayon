@@ -1,17 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Settings, X, Palette, MousePointer2, Clipboard, Download, Upload, Monitor, Check, Type, ChevronDown, Keyboard, Globe, Columns, Rows, Info, Search, FileText, Shield, AlertCircle, Image, GripHorizontal, Zap, Maximize2, Plus, Edit2, Trash2, ChevronRight, Sliders, Server, Terminal, CheckSquare, FileCheck, Copy } from 'lucide-react'
+import { Settings, X, Palette, MousePointer2, Clipboard, Download, Upload, Monitor, Check, Type, ChevronDown, Keyboard, Globe, Columns, Rows, Info, Search, FileText, Shield, AlertCircle, Image, GripHorizontal, Zap, Maximize2, Plus, Edit2, Trash2, Sliders, Server, Terminal, CheckSquare, FileCheck, Copy } from 'lucide-react'
 import { useSettingsStore, formatShortcut, terminalFonts } from '../stores/settingsStore'
 import { useSessionStore } from '../stores/sessionStore'
 import { useLocale } from '../stores/localeStore'
 import { appThemes, AppTheme } from './themes'
 import { uiFonts } from '../stores/settingsStore'
-import { getAppInfo, AUTHOR_INFO, AI_INFO, AppInfo } from '../version'
 import { LogViewer } from './LogViewer'
 import { ImportDialog } from './ImportDialog'
 import { SecureCRTImportDialog } from './SecureCRTImportDialog'
 import { BackgroundSettingsPanel } from './BackgroundSettingsPanel'
 import { BackgroundImageSelector } from './BackgroundImageSelector'
-import { api, PersonalizationTemplate, Session } from '../api/wails'
+import { api, PersonalizationTemplate } from '../api/wails'
 import { SliderInput, ToggleSwitch, SegmentedControl, SettingCard, FontSelector } from './ui'
 import { ApplySessionList } from './ApplySessionList'
 import { AboutSettings } from './tabs'
@@ -117,7 +116,7 @@ function ShortcutRecorder({
 }
 
 export function SettingsPanel({ onClose }: Props) {
-  const { terminalSettings, setTerminalSettings, sidebarTagSettings, setSidebarTagSettings, shortcutSettings, setShortcutSettings, currentTheme, setTheme, getTheme, themes, customThemes, isCustomTheme, createCustomTheme, updateCustomTheme, deleteCustomTheme } = useSettingsStore()
+  const { terminalSettings, setTerminalSettings, sidebarTagSettings, setSidebarTagSettings, shortcutSettings, setShortcutSettings, currentTheme, setTheme, getTheme, themes, isCustomTheme, createCustomTheme, updateCustomTheme, deleteCustomTheme } = useSettingsStore()
   const { exportConfigWithOptions, previewImport, importConfigWithOptions, confirmDialog } = useSessionStore()
   const { language, setLanguage, t } = useLocale()
   const [activeTab, setActiveTab] = useState<TabId>('terminal')
@@ -135,7 +134,6 @@ export function SettingsPanel({ onClose }: Props) {
   const [importData, setImportData] = useState<string>('')
   const [showSecureCRTImport, setShowSecureCRTImport] = useState(false)
   const [secureCRTFilePath, setSecureCRTFilePath] = useState<string>('')
-  const [appInfo, setAppInfo] = useState<AppInfo | null>(null)
   const terminalFontDropdownRef = useRef<HTMLDivElement>(null)
   const uiFontDropdownRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
@@ -149,7 +147,6 @@ export function SettingsPanel({ onClose }: Props) {
   const [isTemplateNew, setIsTemplateNew] = useState(false)
   const [templateError, setTemplateError] = useState('')
   const [templateSaving, setTemplateSaving] = useState(false)
-  const [expandedTemplateSections, setExpandedTemplateSections] = useState<Set<string>>(new Set(['font', 'theme', 'cursor', 'style', 'background', 'scrollback']))
   // 批量应用状态
   const [showApplyDialog, setShowApplyDialog] = useState(false)
   const [selectedSessions, setSelectedSessions] = useState<Set<string>>(new Set())
@@ -276,11 +273,6 @@ export function SettingsPanel({ onClose }: Props) {
     }
   }, [panelWidth])
 
-  // 获取应用信息
-  useEffect(() => {
-    getAppInfo().then(setAppInfo)
-  }, [])
-
   // 加载模板
   useEffect(() => {
     if (activeTab === 'templates') {
@@ -406,55 +398,6 @@ export function SettingsPanel({ onClose }: Props) {
       }
     } catch (e) {
       console.error('Failed to delete template:', e)
-    }
-  }
-
-  const toggleTemplateSection = (section: string) => {
-    setExpandedTemplateSections(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(section)) {
-        newSet.delete(section)
-      } else {
-        newSet.add(section)
-      }
-      return newSet
-    })
-  }
-
-  // 批量应用功能
-  const sessions = useSessionStore.getState().sessions
-
-  const toggleSessionSelection = (sessionId: string) => {
-    setSelectedSessions(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(sessionId)) {
-        newSet.delete(sessionId)
-      } else {
-        newSet.add(sessionId)
-      }
-      return newSet
-    })
-  }
-
-  const selectAllSessions = () => {
-    setSelectedSessions(new Set(sessions.map(s => s.id)))
-  }
-
-  const clearSelectedSessions = () => {
-    setSelectedSessions(new Set())
-  }
-
-  const handleApplyTemplate = async () => {
-    if (!selectedTemplate || selectedSessions.size === 0) return
-
-    try {
-      await api.applyTemplateToSessions(selectedTemplate.id, Array.from(selectedSessions))
-      setShowApplyDialog(false)
-      setSelectedSessions(new Set())
-      // 刷新会话列表
-      useSessionStore.getState().loadSessions()
-    } catch (e) {
-      console.error('Failed to apply template:', e)
     }
   }
 
@@ -1318,7 +1261,7 @@ export function SettingsPanel({ onClose }: Props) {
               </h3>
 
               <div className="space-y-3">
-                {shortcutConfigs.map((config, index) => {
+                {shortcutConfigs.map((config) => {
                   const Icon = config.icon
                   const labelKey = config.labelKey || `shortcuts.${config.key}`
                   const descKey = `${config.key}Desc`

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { Plus, Edit3 } from 'lucide-react'
-import { useSessionStore } from '../stores/sessionStore'
 import { useLocale } from '../stores/localeStore'
 import { DraggableDialog } from './ui'
 import type { Session, Group } from '../api/wails'

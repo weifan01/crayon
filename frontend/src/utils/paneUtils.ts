@@ -1,5 +1,3 @@
-import { api } from '../api/wails'
-
 // 分屏方向
 export type SplitDirection = 'horizontal' | 'vertical'
 
@@ -21,14 +19,6 @@ export function getFirstPane(node: PaneNode): PaneType {
 export function getAllPaneIds(node: PaneNode): string[] {
   if (node.type === 'pane') return [node.id]
   return [...getAllPaneIds(node.children[0]), ...getAllPaneIds(node.children[1])]
-}
-
-// 获取所有 pane 的 sessionId（用于获取所有连接的会话）
-export function getAllPaneSessionIds(node: PaneNode): string[] {
-  if (node.type === 'pane') {
-    return node.sessionId ? [node.sessionId] : []
-  }
-  return [...getAllPaneSessionIds(node.children[0]), ...getAllPaneSessionIds(node.children[1])]
 }
 
 // 检查 pane 是否存在于树中
@@ -61,16 +51,4 @@ const imageMimeTypes: Record<string, string> = {
 export function getImageMimeType(filename: string): string {
   const ext = filename.toLowerCase().split('.').pop()
   return imageMimeTypes[ext || ''] || 'image/png'
-}
-
-// 加载图片为 base64 URL（统一处理背景图片加载）
-export async function loadImageAsBase64Url(filename: string): Promise<string> {
-  if (!filename) return ''
-  try {
-    const base64Data = await api.loadBackgroundImage(filename)
-    return `data:${getImageMimeType(filename)};base64,${base64Data}`
-  } catch (e) {
-    console.error('Failed to load image:', e)
-    return ''
-  }
 }

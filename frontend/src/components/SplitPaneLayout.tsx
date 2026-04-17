@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useCallback, useMemo } from 'react'
+import { useRef, useState, useCallback, useMemo } from 'react'
 import { TerminalPane } from './TerminalPane'
 import { SplitDirection, useTerminalStore, type PaneNode } from '../stores/terminalStore'
 import { useSettingsStore } from '../stores/settingsStore'
@@ -12,12 +12,6 @@ interface Props {
   isActiveTab: boolean
   activePaneId: string
   onPaneClick: (paneId: string) => void
-}
-
-// 获取分屏树中的 pane 数量
-function getPaneCount(node: PaneNode): number {
-  if (node.type === 'pane') return 1
-  return getPaneCount(node.children[0]) + getPaneCount(node.children[1])
 }
 
 // Pane 组件 - 不使用 memo，依赖 wrapper div 的 key 来控制 fiber 的稳定性
@@ -122,7 +116,7 @@ function PaneComponent({
 // 分屏布局组件 - 不使用 memo，依赖内部的 PaneComponent 的稳定性
 export function SplitPaneLayout({ tabId, node, isActiveTab, activePaneId, onPaneClick }: Props) {
   const { getTheme } = useSettingsStore()
-  const { closePane, splitPane, getPaneCount: storeGetPaneCount } = useTerminalStore()
+  const { closePane, splitPane } = useTerminalStore()
   const theme = getTheme()
   const containerRef = useRef<HTMLDivElement>(null)
 

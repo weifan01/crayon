@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { AlertCircle, Check, X, SkipForward, RefreshCw, FileText, Server, Terminal } from 'lucide-react'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useLocale } from '../stores/localeStore'
-import type { ImportSessionPreview, ImportCommandPreview, ImportPreview, ImportOptions } from '../api/wails'
+import type { ImportPreview, ImportOptions } from '../api/wails'
 
 interface ImportDialogProps {
   preview: ImportPreview

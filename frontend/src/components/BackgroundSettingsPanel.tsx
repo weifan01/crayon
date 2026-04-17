@@ -3,7 +3,7 @@ import { Image, Upload, Trash2, RotateCcw, Power, Grid, Plus } from 'lucide-reac
 import { useSettingsStore } from '../stores/settingsStore'
 import { useLocale } from '../stores/localeStore'
 import { api, BackgroundFileInfo } from '../api/wails'
-import { SliderInput, ToggleSwitch, SegmentedControl } from './ui'
+import { SliderInput } from './ui'
 import { getImageMimeType } from '../utils/paneUtils'
 
 export function BackgroundSettingsPanel() {
@@ -14,19 +14,15 @@ export function BackgroundSettingsPanel() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [savedImages, setSavedImages] = useState<BackgroundFileInfo[]>([])
-  const [loadingImages, setLoadingImages] = useState(false)
   const [showImagePicker, setShowImagePicker] = useState(false)
 
   // 加载已保存的图片列表
   const loadSavedImages = async () => {
-    setLoadingImages(true)
     try {
       const images = await api.listBackgroundImages()
       setSavedImages(images || [])
     } catch (e) {
       console.error('Failed to load saved images:', e)
-    } finally {
-      setLoadingImages(false)
     }
   }
 

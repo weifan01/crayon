@@ -2,7 +2,7 @@ import React from 'react'
 import { Check, ChevronDown, ChevronRight, Folder } from 'lucide-react'
 import { useLocale } from '../stores/localeStore'
 import { useSessionStore } from '../stores/sessionStore'
-import { api, PersonalizationTemplate, Session, GroupNode } from '../api/wails'
+import { PersonalizationTemplate, Session, GroupNode } from '../api/wails'
 import { AppTheme } from './themes'
 
 interface ApplySessionListProps {

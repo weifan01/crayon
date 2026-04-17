@@ -3,7 +3,7 @@ import { useSessionStore } from '../stores/sessionStore'
 import { useSidebarSettings } from '../stores/sidebarSettingsStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useLocale } from '../stores/localeStore'
-import { Plus, Folder, Server, Edit3, Trash2, Copy, MoveRight, ChevronRight, ChevronDown, PanelLeftClose, Pin, GripVertical, Settings, FolderPlus, Terminal, Zap, X, Key, Globe, Cpu, ListTree, ListMinus, Sliders } from 'lucide-react'
+import { Plus, Folder, Edit3, Trash2, Copy, MoveRight, ChevronRight, ChevronDown, PanelLeftClose, Pin, GripVertical, Settings, FolderPlus, Terminal, Zap, ListTree, ListMinus } from 'lucide-react'
 import type { Session, GroupNode } from '../api/wails'
 import { api } from '../api/wails'
 import { GroupManager } from './GroupManager'
@@ -32,10 +32,10 @@ interface GroupContextMenuState {
 
 type SidebarMode = 'always-show' | 'auto-hide'
 
-export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings, onQuickConnect }: Props) {
+export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }: Props) {
   const { sessions, groups, groupsTree, loading, loadSessions, loadGroups, loadGroupsTree, createSession, updateSession, deleteSession, cloneSession, searchSessions, getSessionStatus, confirmDialog } = useSessionStore()
   const { sidebar, setSidebarWidth, setSidebarMode } = useSidebarSettings()
-  const { themes, sidebarTagSettings, setSidebarTagSettings } = useSettingsStore()
+  const { sidebarTagSettings } = useSettingsStore()
   const { t } = useLocale()
 
   const [kw, setKw] = useState('')
@@ -229,9 +229,6 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
     }
     setIsDraggingDialog(true)
   }
-
-  // 自动隐藏模式下的悬浮显示
-  const isVisible = sidebar.mode === 'auto-hide' ? isHovered : true
 
   const handleNew = async () => {
     setIsNew(true)
@@ -515,20 +512,6 @@ export function Sidebar({ onSelectSession, onDoubleClickSession, onOpenSettings,
   const getStatusColor = (id: string) => {
     const s = getSessionStatus(id)
     return s === 'connected' ? 'bg-green-500' : s === 'connecting' ? 'bg-yellow-500' : s === 'error' ? 'bg-red-500' : 'bg-gray-500'
-  }
-
-  // 获取协议图标
-  const getProtocolIcon = (protocol: string) => {
-    switch (protocol) {
-      case 'ssh':
-        return <Key size={14} className="text-accent-green" />
-      case 'telnet':
-        return <Globe size={14} className="text-accent-yellow" />
-      case 'serial':
-        return <Cpu size={14} className="text-accent-blue" />
-      default:
-        return <Server size={14} className="text-text-secondary" />
-    }
   }
 
   // 获取协议徽章样式
