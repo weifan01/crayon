@@ -306,6 +306,8 @@ const zh: Record<string, string> = {
 
   // 状态栏
   'statusBar.sessionDuration': '会话时长',
+  'statusBar.size': '窗口',
+  'statusBar.cursor': '光标',
 
   // 标签栏
   'tabBar.noSession': '暂无会话',
@@ -751,6 +753,8 @@ const en: Record<string, string> = {
 
   // Status bar
   'statusBar.sessionDuration': 'Duration',
+  'statusBar.size': 'Size',
+  'statusBar.cursor': 'Cursor',
 
   // Tab bar
   'tabBar.noSession': 'No session',

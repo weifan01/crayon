@@ -17,6 +17,7 @@ export interface Tab {
 interface State {
   tabs: Tab[]
   activeTabId: string | null
+  cursorPositions: Record<string, { row: number; col: number }> // 光标位置，key 为 paneId
   createTab: (sessionId: string, title: string, forceNew?: boolean) => string
   closeTab: (tabId: string) => void
   closePane: (tabId: string, paneId: string) => void
@@ -28,6 +29,7 @@ interface State {
   getPaneCount: (tabId: string) => number
   splitPane: (tabId: string, paneId: string, direction: SplitDirection) => string | null
   updatePaneSize: (tabId: string, paneId: string, cols: number, rows: number) => void
+  updateCursorPosition: (paneId: string, row: number, col: number) => void
   getTabBySessionId: (sessionId: string) => Tab | undefined
 }
 
@@ -75,6 +77,7 @@ function removePane(node: PaneNode, paneId: string): PaneNode | null {
 export const useTerminalStore = create<State>((set, get) => ({
   tabs: [],
   activeTabId: null,
+  cursorPositions: {},
 
   createTab: (sessionId, title, forceNew = false) => {
     // 如果 forceNew 为 false 且该会话的标签页已存在，切换到那个标签页
@@ -232,6 +235,10 @@ export const useTerminalStore = create<State>((set, get) => ({
       tabs: s.tabs.map(t => t.id === tabId ? { ...t, rootPane: newRootPane } : t)
     }
   }),
+
+  updateCursorPosition: (paneId, row, col) => set(s => ({
+    cursorPositions: { ...s.cursorPositions, [paneId]: { row, col } }
+  })),
 
   getTabBySessionId: (sessionId) => {
     const tabs = get().tabs

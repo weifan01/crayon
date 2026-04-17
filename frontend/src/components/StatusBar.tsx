@@ -21,7 +21,7 @@ function formatTime(date: Date): string {
 }
 
 export function StatusBar() {
-  const { activeTabId, getTab } = useTerminalStore()
+  const { activeTabId, getTab, cursorPositions } = useTerminalStore()
   const { sessions, getTabStatus, getConnectionDuration } = useSessionStore()
   const { t } = useLocale()
   const [currentTime, setCurrentTime] = useState(new Date())
@@ -58,6 +58,7 @@ export function StatusBar() {
   const activePane = tab ? findPane(tab.rootPane, tab.activePaneId) : null
   const session = activePane ? sessions.find((s: any) => s.id === activePane.sessionId) : null
   const status = activePane ? getTabStatus(activePane.id) : 'disconnected'
+  const cursorPos = activePane ? cursorPositions[activePane.id] : null
 
   const cfg: Record<string, { text: string; color: string; dot: string }> = {
     connected: { text: t('status.connected'), color: 'text-green-400', dot: 'bg-green-400' },
@@ -69,6 +70,7 @@ export function StatusBar() {
 
   return (
     <div className="h-6 bg-surface-1 border-t border-surface-2 flex items-center px-3 text-xs gap-4">
+      {/* 左侧：连接状态和SSH信息 */}
       <div className="flex items-center gap-1.5">
         <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
         <span className={s.color}>{s.text}</span>
@@ -78,8 +80,6 @@ export function StatusBar() {
           <span className="text-text-muted">|</span>
           <span className="text-text-secondary">{(session as any).protocol?.toUpperCase()}</span>
           <span className="text-text-primary">{(session as any).host}:{(session as any).port}</span>
-          <span className="text-text-muted">|</span>
-          <span className="text-text-secondary">UTF-8</span>
         </>
       )}
       {/* 连接时长 */}
@@ -90,8 +90,24 @@ export function StatusBar() {
           <span className="text-text-primary font-mono">{formatDuration(connectionDuration)}</span>
         </>
       )}
-      {/* 右侧：当前时间 */}
+
+      {/* 右侧：终端信息和时间 */}
       <div className="ml-auto flex items-center gap-4">
+        {/* 窗口尺寸 */}
+        {activePane && (
+          <div className="flex items-center gap-2">
+            <span className="text-text-secondary">{t('statusBar.size')}:</span>
+            <span className="text-text-primary font-mono">{activePane.rows}x{activePane.cols}</span>
+          </div>
+        )}
+        {/* 光标位置 */}
+        {cursorPos && (
+          <div className="flex items-center gap-2">
+            <span className="text-text-secondary">{t('statusBar.cursor')}:</span>
+            <span className="text-text-primary font-mono">{cursorPos.row},{cursorPos.col}</span>
+          </div>
+        )}
+        {/* 当前时间 */}
         <span className="text-text-secondary font-mono">{formatTime(currentTime)}</span>
       </div>
     </div>

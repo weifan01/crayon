@@ -210,9 +210,11 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
         if (status === 'connected') {
           resizeTab(connectionId, newCols, newRows)
         }
+        // 更新 store 中的 pane 尺寸，供 StatusBar 实时显示
+        useTerminalStore.getState().updatePaneSize(tabId, paneId, newCols, newRows)
       }
     }
-  }, [connectionId, getTabStatus, resizeTab])
+  }, [connectionId, getTabStatus, resizeTab, tabId, paneId])
 
   // 初始化终端 - 使用缓存机制避免重新挂载时重新连接
   useEffect(() => {
@@ -384,6 +386,15 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
           } else {
             term.writeln('\x1b[1;31m' + t('terminal.sessionNotFound') + '\x1b[0m')
           }
+        }
+      })
+
+      // 监听光标位置变化
+      term.onCursorMove(() => {
+        if (term.buffer && term.buffer.active) {
+          const col = term.buffer.active.cursorX + 1 // 从 1 开始
+          const row = term.buffer.active.cursorY + 1
+          useTerminalStore.getState().updateCursorPosition(paneId, row, col)
         }
       })
 
