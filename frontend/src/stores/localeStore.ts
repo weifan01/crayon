@@ -330,12 +330,15 @@ const zh: Record<string, string> = {
   'confirm.deleteGroupWithSessions': '分组内有 {count} 个会话，删除分组后这些会话将移动到「未分组」，确定删除？',
   'confirm.deleteSessions': '确定删除 {count} 个会话？',
   'confirm.moveSessions': '确定将 {count} 个会话移动到{group}？',
+  'confirm.copySessions': '确定将 {count} 个会话复制到{group}？',
 
   // 批量操作
   'batch.selected': '已选择 {count} 个会话',
   'batch.selectAll': '全选',
   'batch.cancel': '取消',
   'batch.moveToGroup': '移动分组',
+  'batch.copyToGroup': '复制分组',
+  'batch.connect': '打开连接',
   'batch.delete': '删除',
   'batch.ungrouped': '未分组',
 
@@ -777,12 +780,15 @@ const en: Record<string, string> = {
   'confirm.deleteGroup': 'Are you sure you want to delete group "{name}"? Sessions in this group will be moved to "Ungrouped".',
   'confirm.deleteSessions': 'Are you sure you want to delete {count} session(s)?',
   'confirm.moveSessions': 'Are you sure you want to move {count} session(s) to {group}?',
+  'confirm.copySessions': 'Are you sure you want to copy {count} session(s) to {group}?',
 
   // Batch operations
   'batch.selected': '{count} session(s) selected',
   'batch.selectAll': 'Select All',
   'batch.cancel': 'Cancel',
   'batch.moveToGroup': 'Move to Group',
+  'batch.copyToGroup': 'Copy to Group',
+  'batch.connect': 'Connect',
   'batch.delete': 'Delete',
   'batch.ungrouped': 'Ungrouped',
 

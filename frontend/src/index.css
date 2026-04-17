@@ -1207,3 +1207,8 @@ html[data-custom-bg="both"] .xterm-viewport {
   height: 100%;
   object-fit: cover;
 }
+
+/* 隐藏滚动条 */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

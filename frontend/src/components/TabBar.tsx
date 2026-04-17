@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSessionStore } from '../stores/sessionStore'
 import { useTerminalStore, SplitDirection, Tab } from '../stores/terminalStore'
 import { useLocale } from '../stores/localeStore'
-import { X, Copy, Columns, Rows } from 'lucide-react'
+import { X, Copy, Columns, Rows, ChevronLeft, ChevronRight } from 'lucide-react'
 import { getFirstPane, getAllPaneIds } from '../utils/paneUtils'
 
 interface Props {
@@ -14,12 +14,95 @@ export function TabBar({ onCloneTab }: Props) {
   const { getTabStatus, disconnectTab, cleanupTab, confirmDialog } = useSessionStore()
   const { t } = useLocale()
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; tabId: string; sessionId: string } | null>(null)
+  const [tooltip, setTooltip] = useState<{ title: string; x: number; y: number } | null>(null)
+  const [showScrollButtons, setShowScrollButtons] = useState(false)
+  const tooltipTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const tabRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const tabsContainerRef = useRef<HTMLDivElement>(null)
 
   // 使用 paneId 获取状态颜色
   const getColor = (paneId: string) => {
     const s = getTabStatus(paneId)
     return s === 'connected' ? 'bg-green-500' : s === 'connecting' ? 'bg-yellow-500' : s === 'error' ? 'bg-red-500' : 'bg-gray-500'
   }
+
+  // 检测是否需要显示滚动按钮
+  useEffect(() => {
+    const checkScroll = () => {
+      if (!tabsContainerRef.current) return
+      const { scrollWidth, clientWidth } = tabsContainerRef.current
+      setShowScrollButtons(scrollWidth > clientWidth + 10)
+    }
+    checkScroll()
+    window.addEventListener('resize', checkScroll)
+    return () => window.removeEventListener('resize', checkScroll)
+  }, [tabs])
+
+  // 活动标签页滚动到可见区域
+  useEffect(() => {
+    if (!activeTabId) return
+    const activeTabEl = tabRefs.current[activeTabId]
+    if (!activeTabEl) return
+    activeTabEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+  }, [activeTabId])
+
+  // 左右滚动
+  const scrollTabs = (direction: 'left' | 'right') => {
+    if (!tabsContainerRef.current) return
+    const scrollAmount = 150
+    tabsContainerRef.current.scrollBy({
+      left: direction === 'left' ? -scrollAmount : scrollAmount,
+      behavior: 'smooth'
+    })
+  }
+
+  // 处理鼠标悬停 - 200ms后显示tooltip
+  const handleTabMouseEnter = (tabId: string) => {
+    if (tooltipTimerRef.current) {
+      clearTimeout(tooltipTimerRef.current)
+    }
+
+    tooltipTimerRef.current = setTimeout(() => {
+      const tabEl = tabRefs.current[tabId]
+      if (!tabEl) return
+
+      // 检测标题是否被截断（性能优化：未截断时不显示 tooltip）
+      const textEl = tabEl.querySelector('.truncate')
+      if (textEl && textEl.scrollWidth <= textEl.clientWidth) {
+        // 标题完整显示，不需要 tooltip
+        return
+      }
+
+      const currentTabs = useTerminalStore.getState().tabs
+      const tab = currentTabs.find(t => t.id === tabId)
+      if (!tab) return
+      const title = getFirstPane(tab.rootPane).title
+
+      const rect = tabEl.getBoundingClientRect()
+      setTooltip({
+        title,
+        x: rect.left + rect.width / 2,
+        y: rect.top - 4
+      })
+    }, 200)
+  }
+
+  const handleTabMouseLeave = () => {
+    if (tooltipTimerRef.current) {
+      clearTimeout(tooltipTimerRef.current)
+      tooltipTimerRef.current = null
+    }
+    setTooltip(null)
+  }
+
+  // 清理定时器
+  useEffect(() => {
+    return () => {
+      if (tooltipTimerRef.current) {
+        clearTimeout(tooltipTimerRef.current)
+      }
+    }
+  }, [])
 
   // 点击外部关闭菜单
   useEffect(() => {
@@ -194,40 +277,86 @@ export function TabBar({ onCloneTab }: Props) {
 
   return (
     <>
-      <div className="h-8 bg-surface-1 border-b border-surface-2 flex items-center overflow-x-auto">
-        {tabs.map(tab => {
-          const firstPane = getFirstPane(tab.rootPane)
-          const title = firstPane.title
-          const sessionId = firstPane.sessionId
-          // 使用活动 pane 的状态作为标签页状态指示
-          const statusColor = getColor(tab.activePaneId)
+      <div className="h-8 bg-surface-1 border-b border-surface-2 flex items-center">
+        {/* 左侧滚动按钮 */}
+        {showScrollButtons && (
+          <button
+            className="flex items-center justify-center w-6 h-full hover:bg-surface-2 text-accent-blue hover:text-accent-blue/80"
+            onClick={() => scrollTabs('left')}
+          >
+            <ChevronLeft size={16} />
+          </button>
+        )}
 
-          return (
-            <div
-              key={tab.id}
-              className={`flex items-center gap-2 px-3 h-full cursor-pointer border-r border-surface-2 min-w-[100px] max-w-[180px] ${
-                tab.id === activeTabId ? 'bg-surface-0 border-b-2 border-b-accent-blue' : 'hover:bg-surface-2'
-              }`}
-              onClick={() => setActiveTab(tab.id)}
-              onContextMenu={(e) => handleContextMenu(e, tab.id, sessionId)}
-            >
-              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${statusColor}`} />
-              <span className="text-sm text-text-primary truncate flex-1">{title}</span>
-              <button
-                type="button"
-                className="flex items-center justify-center w-6 h-6 rounded hover:bg-red-500/20 text-text-muted hover:text-red-400 ml-1 flex-shrink-0"
-                onMouseDown={(e) => {
-                  e.stopPropagation()
-                  e.preventDefault()
-                  handleCloseTab(e, tab)
-                }}
+        {/* 标签页容器 - 隐藏滚动条 */}
+        <div
+          ref={tabsContainerRef}
+          className="flex-1 flex items-center overflow-x-auto scrollbar-hide"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          {tabs.map(tab => {
+            const firstPane = getFirstPane(tab.rootPane)
+            const title = firstPane.title
+            const sessionId = firstPane.sessionId
+            const statusColor = getColor(tab.activePaneId)
+            const isActive = tab.id === activeTabId
+
+            return (
+              <div
+                key={tab.id}
+                ref={el => tabRefs.current[tab.id] = el}
+                className={`flex items-center gap-1.5 px-1.5 h-full cursor-pointer border-r border-surface-2 ${
+                  isActive
+                    ? 'bg-surface-0 border-b-2 border-b-accent-blue flex-shrink-0'
+                    : 'hover:bg-surface-2 flex-1 flex-shrink min-w-[60px]'
+                }`}
+                onClick={() => setActiveTab(tab.id)}
+                onContextMenu={(e) => handleContextMenu(e, tab.id, sessionId)}
+                onMouseEnter={() => handleTabMouseEnter(tab.id)}
+                onMouseLeave={handleTabMouseLeave}
               >
-                <X size={14} />
-              </button>
-            </div>
-          )
-        })}
+                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${statusColor}`} />
+                <span className={`text-sm text-text-primary ${isActive ? '' : 'truncate flex-1 min-w-0'}`}>{title}</span>
+                <button
+                  type="button"
+                  className="flex items-center justify-center w-4 h-4 rounded hover:bg-red-500/20 text-text-muted hover:text-red-400 flex-shrink-0"
+                  onMouseDown={(e) => {
+                    e.stopPropagation()
+                    e.preventDefault()
+                    handleCloseTab(e, tab)
+                  }}
+                >
+                  <X size={10} />
+                </button>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* 右侧滚动按钮 */}
+        {showScrollButtons && (
+          <button
+            className="flex items-center justify-center w-6 h-full hover:bg-surface-2 text-accent-blue hover:text-accent-blue/80"
+            onClick={() => scrollTabs('right')}
+          >
+            <ChevronRight size={16} />
+          </button>
+        )}
       </div>
+
+      {/* Tooltip - fixed 定位不受 overflow 裁剪 */}
+      {tooltip && (
+        <div
+          className="fixed px-2 py-1 bg-surface-2 border border-surface-3 text-text-primary text-xs rounded shadow-lg whitespace-nowrap z-[9999] pointer-events-none"
+          style={{
+            left: tooltip.x,
+            top: tooltip.y,
+            transform: 'translateX(-50%) translateY(-100%)'
+          }}
+        >
+          {tooltip.title}
+        </div>
+      )}
 
       {/* 右键菜单 */}
       {contextMenu && (

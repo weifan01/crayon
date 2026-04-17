@@ -3,7 +3,7 @@ import { useSessionStore } from '../stores/sessionStore'
 import { useSidebarSettings } from '../stores/sidebarSettingsStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useLocale } from '../stores/localeStore'
-import { Plus, Folder, Edit3, Trash2, Copy, MoveRight, ChevronRight, ChevronDown, Pin, GripVertical, Settings, FolderPlus, Terminal, Zap, ListTree, ListMinus, Key, Globe, Cpu, Lock, FileKey, UserCircle } from 'lucide-react'
+import { Plus, Folder, Edit3, Trash2, Copy, MoveRight, ChevronRight, ChevronDown, Pin, GripVertical, Settings, FolderPlus, Terminal, Zap, ListTree, ListMinus, Server, Wifi, Usb, Lock, Key, Fingerprint, Play } from 'lucide-react'
 import type { Session, GroupNode } from '../api/wails'
 import { api } from '../api/wails'
 import { GroupManager } from './GroupManager'
@@ -63,6 +63,7 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
   const dragOffset = useRef({ x: 0, y: 0 })
 
   const contextMenuRef = useRef<HTMLDivElement>(null)
+  const groupContextMenuRef = useRef<HTMLDivElement>(null)
   const resizeRef = useRef<HTMLDivElement>(null)
   const sidebarRef = useRef<HTMLDivElement>(null)
 
@@ -71,11 +72,14 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
   // 点击外部关闭右键菜单
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
+      // 关闭会话右键菜单（点击菜单外部时）
       if (contextMenuRef.current && !contextMenuRef.current.contains(e.target as Node)) {
         setContextMenu(null)
       }
-      // 关闭分组右键菜单
-      setGroupContextMenu(null)
+      // 关闭分组右键菜单（点击菜单外部时）
+      if (groupContextMenuRef.current && !groupContextMenuRef.current.contains(e.target as Node)) {
+        setGroupContextMenu(null)
+      }
     }
     if (contextMenu || groupContextMenu) {
       document.addEventListener('mousedown', handleClickOutside)
@@ -446,6 +450,40 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
     clearSelection()
   }
 
+  // 批量复制到分组
+  const handleBatchCopyToGroup = async (groupName: string) => {
+    if (selectedSessions.size === 0) return
+    const confirmed = await confirmDialog(
+      t('common.confirm'),
+      t('confirm.copySessions').replace('{count}', String(selectedSessions.size)).replace('{group}', groupName || t('batch.ungrouped'))
+    )
+    if (!confirmed) return
+
+    for (const id of selectedSessions) {
+      const session = sessions.find(s => s.id === id)
+      if (session) {
+        try {
+          const cloned = await cloneSession(id)
+          await updateSession({ ...cloned, name: cloned.name + ' (副本)', group: groupName })
+        } catch (e) {
+          console.error('Clone failed:', e)
+        }
+      }
+    }
+    clearSelection()
+    setContextMenu(null)
+  }
+
+  // 批量连接会话
+  const handleBatchConnect = () => {
+    if (selectedSessions.size === 0) return
+    for (const id of selectedSessions) {
+      onDoubleClickSession?.(id)
+    }
+    clearSelection()
+    setContextMenu(null)
+  }
+
   const handleMoveToGroup = async (groupName: string) => {
     if (!contextMenu) return
     await updateSession({ ...contextMenu.session, group: groupName })
@@ -500,13 +538,13 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
   const getProtocolIcon = (protocol: string) => {
     switch (protocol) {
       case 'ssh':
-        return <Key size={12} className="text-green-400" />
+        return <Server size={12} className="text-green-400" />
       case 'telnet':
-        return <Globe size={12} className="text-yellow-400" />
+        return <Wifi size={12} className="text-yellow-400" />
       case 'serial':
-        return <Cpu size={12} className="text-blue-400" />
+        return <Usb size={12} className="text-blue-400" />
       case 'local':
-        return <Terminal size={12} className="text-text-muted" />
+        return <Terminal size={12} className="text-pink-400" />
       default:
         return null
     }
@@ -518,9 +556,9 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
       case 'password':
         return <Lock size={12} className="text-purple-400" />
       case 'key':
-        return <FileKey size={12} className="text-cyan-400" />
+        return <Key size={12} className="text-cyan-400" />
       case 'agent':
-        return <UserCircle size={12} className="text-orange-400" />
+        return <Fingerprint size={12} className="text-orange-400" />
       default:
         return null
     }
@@ -1050,6 +1088,15 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
               <div className="px-3 py-2 text-xs text-text-muted border-b border-surface-2">
                 {t('batch.selected').replace('{count}', String(selectedSessions.size))}
               </div>
+              {/* 打开连接 */}
+              <div
+                className="w-full px-3 py-2 text-sm text-text-primary hover:bg-surface-2 flex items-center gap-2 cursor-pointer"
+                onClick={() => { handleBatchConnect(); setContextMenu(null); }}
+              >
+                <Play size={14} /> {t('batch.connect')}
+              </div>
+              <div className="border-t border-surface-2 my-1" />
+              {/* 移动到分组 */}
               <div className="relative">
                 <div
                   className="w-full px-3 py-2 text-sm text-text-primary hover:bg-surface-2 flex items-center justify-between cursor-pointer"
@@ -1083,7 +1130,42 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
                   </div>
                 )}
               </div>
+              {/* 复制到分组 */}
+              <div className="relative">
+                <div
+                  className="w-full px-3 py-2 text-sm text-text-primary hover:bg-surface-2 flex items-center justify-between cursor-pointer"
+                  onMouseEnter={() => setContextMenu(prev => prev ? { ...prev, groupMenuMode: 'copy' } : null)}
+                >
+                  <div className="flex items-center gap-2">
+                    <Copy size={14} /> {t('batch.copyToGroup')}
+                  </div>
+                  <ChevronRight size={14} />
+                </div>
+                {contextMenu.groupMenuMode === 'copy' && (
+                  <div
+                    className="absolute left-full top-0 bg-surface-1 border border-surface-2 rounded-lg shadow-xl py-1 min-w-[120px]"
+                    onMouseLeave={() => setContextMenu(prev => prev ? { ...prev, groupMenuMode: null } : null)}
+                  >
+                    <div
+                      className="px-3 py-2 text-sm text-text-primary hover:bg-surface-2 cursor-pointer"
+                      onClick={() => { handleBatchCopyToGroup(''); setContextMenu(null); }}
+                    >
+                      {t('batch.ungrouped')}
+                    </div>
+                    {groups.map(g => (
+                      <div
+                        key={g.id}
+                        className="px-3 py-2 text-sm text-text-primary hover:bg-surface-2 cursor-pointer"
+                        onClick={() => { handleBatchCopyToGroup(g.path); setContextMenu(null); }}
+                      >
+                        {g.path}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               <div className="border-t border-surface-2 my-1" />
+              {/* 删除 */}
               <div
                 className="w-full px-3 py-2 text-sm text-accent-red hover:bg-surface-2 flex items-center gap-2 cursor-pointer"
                 onClick={() => { handleBatchDelete(); setContextMenu(null); }}
@@ -1191,10 +1273,52 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
       {/* 分组右键菜单 */}
       {groupContextMenu && (
         <div
+          ref={groupContextMenuRef}
           className="fixed bg-surface-1 border border-surface-2 rounded-lg shadow-xl py-1 z-[9999] min-w-[140px]"
           style={{ left: groupContextMenu.x, top: groupContextMenu.y }}
           onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
         >
+          {/* 新建会话 */}
+          <div
+            className="px-3 py-2 text-sm text-text-primary hover:bg-surface-2 flex items-center gap-2 cursor-pointer"
+            onClick={() => {
+              const groupPath = groupContextMenu?.group.group.path || ''
+              setGroupContextMenu(null)
+              setIsNew(true)
+              setEdit({
+                name: '',
+                protocol: 'ssh',
+                host: '',
+                port: 22,
+                user: '',
+                authType: 'password',
+                password: '',
+                keyPath: '',
+                group: groupPath,
+                description: '',
+                dataBits: 8,
+                stopBits: 1,
+                parity: 'none',
+                useCustomSettings: false,
+                templateId: '',
+                fontSize: 14,
+                fontFamily: '',
+                themeId: '',
+                backgroundOpacity: 50,
+                backgroundBlur: 0,
+                backgroundImage: '',
+                scrollback: 10000,
+                encoding: 'UTF-8',
+                keepAlive: 30,
+                terminalType: 'xterm-256color',
+              })
+              setShow(true)
+            }}
+          >
+            <Plus size={14} /> {t('sidebar.newSession')}
+          </div>
+          {/* 新建子目录 */}
           <div
             className="px-3 py-2 text-sm text-text-primary hover:bg-surface-2 flex items-center gap-2 cursor-pointer"
             onClick={handleCreateSubGroup}
