@@ -308,7 +308,7 @@ export function TabBar({ onCloneTab }: Props) {
                 className={`flex items-center gap-1.5 px-1.5 h-full cursor-pointer border-r border-surface-2 ${
                   isActive
                     ? 'bg-surface-0 border-b-2 border-b-accent-blue flex-shrink-0'
-                    : 'hover:bg-surface-2 flex-1 flex-shrink min-w-[60px]'
+                    : 'hover:bg-surface-2 flex-shrink min-w-[60px] max-w-[160px]'
                 }`}
                 onClick={() => setActiveTab(tab.id)}
                 onContextMenu={(e) => handleContextMenu(e, tab.id, sessionId)}
@@ -316,7 +316,7 @@ export function TabBar({ onCloneTab }: Props) {
                 onMouseLeave={handleTabMouseLeave}
               >
                 <span className={`w-2 h-2 rounded-full flex-shrink-0 ${statusColor}`} />
-                <span className={`text-sm text-text-primary ${isActive ? '' : 'truncate flex-1 min-w-0'}`}>{title}</span>
+                <span className={`text-sm text-text-primary ${isActive ? '' : 'truncate'}`}>{title}</span>
                 <button
                   type="button"
                   className="flex items-center justify-center w-4 h-4 rounded hover:bg-red-500/20 text-text-muted hover:text-red-400 flex-shrink-0"

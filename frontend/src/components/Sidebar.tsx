@@ -1416,16 +1416,16 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
       {showRenameDialog && (
         <div className="fixed inset-0 flex items-center justify-center z-[9999]" onClick={() => setShowRenameDialog(false)}>
           <div
-            className="dialog-panel"
-            style={{ width: 320 }}
+            className="dialog-panel flex flex-col"
+            style={{ width: 280 }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* 头部 */}
-            <div className="p-4 border-b border-surface-2 flex items-center justify-between">
+            <div className="p-4 border-b border-surface-2 flex items-center">
               <h2 className="text-base font-semibold text-text-primary">{t('sidebar.renameGroup')}</h2>
               <button
                 onClick={() => setShowRenameDialog(false)}
-                className="p-1 hover:bg-surface-2 rounded text-text-muted"
+                className="ml-auto p-1 hover:bg-surface-2 rounded text-text-muted"
               >
                 <X size={16} />
               </button>
@@ -1461,16 +1461,16 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
       {showSubGroupDialog && (
         <div className="fixed inset-0 flex items-center justify-center z-[9999]" onClick={() => setShowSubGroupDialog(false)}>
           <div
-            className="dialog-panel"
-            style={{ width: 320 }}
+            className="dialog-panel flex flex-col"
+            style={{ width: 280 }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* 头部 */}
-            <div className="p-4 border-b border-surface-2 flex items-center justify-between">
+            <div className="p-4 border-b border-surface-2 flex items-center">
               <h2 className="text-base font-semibold text-text-primary">{t('sidebar.newSubGroup')}</h2>
               <button
                 onClick={() => setShowSubGroupDialog(false)}
-                className="p-1 hover:bg-surface-2 rounded text-text-muted"
+                className="ml-auto p-1 hover:bg-surface-2 rounded text-text-muted"
               >
                 <X size={16} />
               </button>
