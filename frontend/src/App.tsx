@@ -384,19 +384,13 @@ function App() {
                 <div className="text-center">
                   <div
                     className="w-24 h-24 mx-auto mb-8 rounded-2xl flex items-center justify-center cursor-pointer transition-all duration-300 hover:scale-110 hover:shadow-lg"
-                    style={{ backgroundColor: 'var(--surface-2)' }}
+                    style={{ backgroundColor: 'rgba(255, 107, 107, 0.15)' }}
                     onClick={() => setShowQuickConnect(true)}
                     title={t('welcome.clickToConnect')}
                   >
                     <Zap size={40} style={{ color: 'var(--accent)' }} />
                   </div>
                   <p className="text-2xl mb-3 text-text-secondary font-semibold">{APP_NAME}</p>
-                  <p
-                    className="text-sm text-accent cursor-pointer hover:underline transition-colors"
-                    onClick={() => setShowQuickConnect(true)}
-                  >
-                    {t('welcome.clickToConnect')}
-                  </p>
                 </div>
               </div>
             ) : (

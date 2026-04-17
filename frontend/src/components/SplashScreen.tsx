@@ -191,12 +191,6 @@ export function SplashScreen({ onFinish }: SplashScreenProps) {
           >
             Crayon
           </h1>
-          <p
-            className="mt-2 text-sm tracking-widest"
-            style={{ color: 'rgba(255,255,255,0.5)' }}
-          >
-            Terminal Emulator
-          </p>
         </div>
 
         {/* 加载指示器 */}

@@ -3,7 +3,6 @@ import { useSessionStore } from '../stores/sessionStore'
 import { useTerminalStore } from '../stores/terminalStore'
 import { useLocale } from '../stores/localeStore'
 import { findPane } from '../utils/paneUtils'
-import { APP_NAME, getAppInfo } from '../version'
 
 // 格式化时长（秒 -> HH:MM:SS）
 function formatDuration(seconds: number): string {
@@ -27,12 +26,6 @@ export function StatusBar() {
   const { t } = useLocale()
   const [currentTime, setCurrentTime] = useState(new Date())
   const [connectionDuration, setConnectionDuration] = useState(0)
-  const [version, setVersion] = useState('dev')
-
-  // 获取版本信息
-  useEffect(() => {
-    getAppInfo().then(info => setVersion(info.version))
-  }, [])
 
   // 更新当前时间
   useEffect(() => {
@@ -97,10 +90,9 @@ export function StatusBar() {
           <span className="text-text-primary font-mono">{formatDuration(connectionDuration)}</span>
         </>
       )}
-      {/* 右侧：当前时间和版本 */}
+      {/* 右侧：当前时间 */}
       <div className="ml-auto flex items-center gap-4">
         <span className="text-text-secondary font-mono">{formatTime(currentTime)}</span>
-        <span className="text-text-muted">{APP_NAME} {version}</span>
       </div>
     </div>
   )
