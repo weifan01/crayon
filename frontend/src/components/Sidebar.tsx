@@ -3,7 +3,7 @@ import { useSessionStore } from '../stores/sessionStore'
 import { useSidebarSettings } from '../stores/sidebarSettingsStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useLocale } from '../stores/localeStore'
-import { Plus, Folder, Edit3, Trash2, Copy, MoveRight, ChevronRight, ChevronDown, PanelLeftClose, Pin, GripVertical, Settings, FolderPlus, Terminal, Zap, ListTree, ListMinus } from 'lucide-react'
+import { Plus, Folder, Edit3, Trash2, Copy, MoveRight, ChevronRight, ChevronDown, Pin, GripVertical, Settings, FolderPlus, Terminal, Zap, ListTree, ListMinus, Key, Globe, Cpu, Lock, FileKey, UserCircle } from 'lucide-react'
 import type { Session, GroupNode } from '../api/wails'
 import { api } from '../api/wails'
 import { GroupManager } from './GroupManager'
@@ -30,8 +30,6 @@ interface GroupContextMenuState {
   group: GroupNode
 }
 
-type SidebarMode = 'always-show' | 'auto-hide'
-
 export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }: Props) {
   const { sessions, groups, groupsTree, loading, loadSessions, loadGroups, loadGroupsTree, createSession, updateSession, deleteSession, cloneSession, searchSessions, getSessionStatus, confirmDialog } = useSessionStore()
   const { sidebar, setSidebarWidth, setSidebarMode } = useSidebarSettings()
@@ -43,7 +41,6 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
   const [showGroups, setShowGroups] = useState(false)
   const [showCommands, setShowCommands] = useState(false)
   const [showQuickConnect, setShowQuickConnect] = useState(false)
-  const [showModeMenu, setShowModeMenu] = useState(false)
   const [edit, setEdit] = useState<Partial<Session>>({})
   const [isNew, setIsNew] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -104,13 +101,6 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
           setGroupContextMenu(null)
           return
         }
-        // 关闭模式切换菜单
-        if (showModeMenu) {
-          e.preventDefault()
-          e.stopPropagation()
-          setShowModeMenu(false)
-          return
-        }
         // 关闭对话框
         if (show) {
           e.preventDefault()
@@ -150,7 +140,7 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
     }
     document.addEventListener('keydown', handleKeyDown, true) // 使用 capture 模式
     return () => document.removeEventListener('keydown', handleKeyDown, true)
-  }, [selectedSessions, sessions, show, showGroups, showCommands, showQuickConnect, showModeMenu, contextMenu, groupContextMenu])
+  }, [selectedSessions, sessions, show, showGroups, showCommands, showQuickConnect, contextMenu, groupContextMenu])
 
   // 点击外部关闭批量分组菜单
   useEffect(() => {
@@ -159,14 +149,6 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
     document.addEventListener('click', handleClick)
     return () => document.removeEventListener('click', handleClick)
   }, [showBatchGroupMenu])
-
-  // 点击外部关闭模式切换菜单
-  useEffect(() => {
-    if (!showModeMenu) return
-    const handleClick = () => setShowModeMenu(false)
-    document.addEventListener('click', handleClick)
-    return () => document.removeEventListener('click', handleClick)
-  }, [showModeMenu])
 
   // 宽度拖拽调整
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -514,41 +496,33 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
     return s === 'connected' ? 'bg-green-500' : s === 'connecting' ? 'bg-yellow-500' : s === 'error' ? 'bg-red-500' : 'bg-gray-500'
   }
 
-  // 获取协议徽章样式
-  const getProtocolBadgeClass = (protocol: string) => {
+  // 获取协议图标
+  const getProtocolIcon = (protocol: string) => {
     switch (protocol) {
       case 'ssh':
-        return 'bg-green-500/20 text-green-400'
+        return <Key size={12} className="text-green-400" />
       case 'telnet':
-        return 'bg-yellow-500/20 text-yellow-400'
+        return <Globe size={12} className="text-yellow-400" />
       case 'serial':
-        return 'bg-blue-500/20 text-blue-400'
+        return <Cpu size={12} className="text-blue-400" />
+      case 'local':
+        return <Terminal size={12} className="text-text-muted" />
       default:
-        return 'bg-surface-2 text-text-muted'
+        return null
     }
   }
 
-  // 获取认证类型徽章样式
-  const getAuthTypeBadgeClass = (authType: string) => {
+  // 获取认证类型图标
+  const getAuthTypeIcon = (authType: string) => {
     switch (authType) {
       case 'password':
-        return 'bg-purple-500/20 text-purple-400'
+        return <Lock size={12} className="text-purple-400" />
       case 'key':
-        return 'bg-cyan-500/20 text-cyan-400'
+        return <FileKey size={12} className="text-cyan-400" />
+      case 'agent':
+        return <UserCircle size={12} className="text-orange-400" />
       default:
-        return 'bg-surface-2 text-text-muted'
-    }
-  }
-
-  // 获取认证类型显示文本
-  const getAuthTypeText = (authType: string) => {
-    switch (authType) {
-      case 'password':
-        return t('session.password')
-      case 'key':
-        return t('session.publicKey')
-      default:
-        return authType
+        return null
     }
   }
 
@@ -723,13 +697,13 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
                     <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getStatusColor(s.id)}`} />
                     <span className="text-sm text-text-primary truncate">{s.name}</span>
                     {sidebarTagSettings.showProtocol && (
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium uppercase flex-shrink-0 ${getProtocolBadgeClass(s.protocol)}`}>
-                        {s.protocol}
+                      <span className="flex-shrink-0 px-1">
+                        {getProtocolIcon(s.protocol)}
                       </span>
                     )}
                     {sidebarTagSettings.showAuthType && s.protocol === 'ssh' && (
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium flex-shrink-0 ${getAuthTypeBadgeClass(s.authType || 'password')}`}>
-                        {getAuthTypeText(s.authType || 'password')}
+                      <span className="flex-shrink-0 px-1">
+                        {getAuthTypeIcon(s.authType || 'password')}
                       </span>
                     )}
                   </div>
@@ -771,43 +745,15 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
 
           {/* 标题栏 */}
           <div className="p-3 flex items-center justify-between border-b border-surface-2">
-            <span title={t('sidebar.sessions')}><Terminal size={18} className="text-accent-red" /></span>
-            <div className="flex items-center gap-1">
-              {sidebar.mode === 'always-show' && (
-                <span className="flex items-center" title={t('sidebar.alwaysShow')}>
-                  <Pin size={12} className="text-accent-blue" />
-                </span>
-              )}
-              {/* 模式切换菜单 */}
-              <div className="relative">
-                <button
-                  onClick={e => { e.stopPropagation(); setShowModeMenu(!showModeMenu) }}
-                  className="p-1 hover:bg-surface-2 rounded text-text-secondary"
-                  title={t('sidebar.settings')}
-                >
-                  <Settings size={14} />
-                </button>
-                {showModeMenu && (
-                  <div className="absolute right-0 top-full mt-1 bg-surface-1 border border-surface-2 rounded-lg shadow-xl py-1 min-w-[140px] z-50" onClick={e => e.stopPropagation()}>
-                    <div className="px-2 py-1 text-xs text-text-muted border-b border-surface-2">{t('sidebar.mode')}</div>
-                    {[
-                      { mode: 'always-show' as SidebarMode, label: t('sidebar.alwaysShow'), icon: <Pin size={12} /> },
-                      { mode: 'auto-hide' as SidebarMode, label: t('sidebar.autoHide'), icon: <PanelLeftClose size={12} /> },
-                    ].map(item => (
-                      <div
-                        key={item.mode}
-                        className={`px-3 py-2 text-sm text-text-primary hover:bg-surface-2 flex items-center gap-2 cursor-pointer ${sidebar.mode === item.mode ? 'bg-surface-2' : ''}`}
-                        onClick={() => { setSidebarMode(item.mode); setShowModeMenu(false); }}
-                      >
-                        {item.icon}
-                        <span>{item.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-        </div>
-      </div>
+            <span title={t('sidebar.sessions')}><Terminal size={16} strokeWidth={3.5} className="text-accent-red" /></span>
+            <button
+              onClick={e => { e.stopPropagation(); setSidebarMode(sidebar.mode === 'always-show' ? 'auto-hide' : 'always-show'); }}
+              className={`p-1 hover:bg-surface-2 rounded transition-colors ${sidebar.mode === 'always-show' ? 'text-accent-blue' : 'text-text-secondary'}`}
+              title={sidebar.mode === 'always-show' ? t('sidebar.alwaysShow') : t('sidebar.autoHide')}
+            >
+              <Pin size={14} />
+            </button>
+          </div>
 
       {/* 拖拽提示 */}
       <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 flex flex-col items-center justify-center gap-1 opacity-0 hover:opacity-100 transition-opacity pointer-events-none">
@@ -895,13 +841,13 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
                       <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getStatusColor(s.id)}`} />
                       <span className="text-sm text-text-primary truncate">{s.name}</span>
                       {sidebarTagSettings.showProtocol && (
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium uppercase ${getProtocolBadgeClass(s.protocol)}`}>
-                          {s.protocol}
+                        <span className="flex-shrink-0 px-1">
+                          {getProtocolIcon(s.protocol)}
                         </span>
                       )}
                       {sidebarTagSettings.showAuthType && s.protocol === 'ssh' && (
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${getAuthTypeBadgeClass(s.authType || 'password')}`}>
-                          {getAuthTypeText(s.authType || 'password')}
+                        <span className="flex-shrink-0 px-1">
+                          {getAuthTypeIcon(s.authType || 'password')}
                         </span>
                       )}
                     </div>
