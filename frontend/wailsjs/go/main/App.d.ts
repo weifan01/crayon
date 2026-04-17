@@ -52,6 +52,8 @@ export function GetBackgroundDir():Promise<string>;
 
 export function GetCommand(arg1:string):Promise<command.Command>;
 
+export function GetConnectionInfo(arg1:string):Promise<Record<string, string>>;
+
 export function GetHomeDir():Promise<string>;
 
 export function GetLanguage():Promise<string>;

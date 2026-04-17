@@ -254,3 +254,18 @@ func (c *LocalShellConnection) Resize(cols, rows int) error {
 func (c *LocalShellConnection) NeedLocalEcho() bool {
 	return false
 }
+
+// GetConnectionInfo 获取连接详情
+func (c *LocalShellConnection) GetConnectionInfo() (map[string]string, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.ptmx == nil {
+		return nil, errors.New("not connected")
+	}
+
+	return map[string]string{
+		"shell":      c.shell,
+		"workingDir": c.workingDir,
+	}, nil
+}

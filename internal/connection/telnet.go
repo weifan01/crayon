@@ -665,3 +665,18 @@ func (c *TelnetConnection) SetOnEchoChange(callback func(needLocalEcho bool)) {
 	c.onEchoChange = callback
 	c.mu.Unlock()
 }
+
+// GetConnectionInfo 获取连接详情
+func (c *TelnetConnection) GetConnectionInfo() (map[string]string, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.conn == nil {
+		return nil, errors.New("not connected")
+	}
+
+	return map[string]string{
+		"remoteAddr": c.conn.RemoteAddr().String(),
+		"localAddr":  c.conn.LocalAddr().String(),
+	}, nil
+}

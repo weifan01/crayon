@@ -8,6 +8,7 @@ interface State {
   connectionStatus: Record<string, ConnectionStatus>
   tabSessionMap: Record<string, string>
   connectionStartTime: Record<string, number>
+  connectionInfo: Record<string, Record<string, string>> // 连接详情，key 为 tabId
   loading: boolean
   error: string | null
 
@@ -28,6 +29,8 @@ interface State {
   resizeTab: (tabId: string, cols: number, rows: number) => Promise<void>
   getSessionStatus: (sessionId: string) => ConnectionStatus
   getConnectionDuration: (tabId: string) => number
+  getConnectionInfo: (tabId: string) => Record<string, string> | null
+  loadConnectionInfo: (tabId: string) => Promise<void>
   cleanupTab: (tabId: string) => void
 
   // 导入导出
@@ -70,6 +73,7 @@ export const useSessionStore = create<State>((set, get) => ({
   connectionStatus: {},
   tabSessionMap: {},
   connectionStartTime: {},
+  connectionInfo: {},
   loading: false,
   error: null,
 
@@ -190,12 +194,28 @@ export const useSessionStore = create<State>((set, get) => ({
     return Math.floor((Date.now() - connectionStartTime[tabId]) / 1000)
   },
 
+  getConnectionInfo: (tabId) => get().connectionInfo[tabId] || null,
+
+  loadConnectionInfo: async (tabId) => {
+    try {
+      const info = await api.getConnectionInfo(tabId)
+      if (info) {
+        set(state => ({
+          connectionInfo: { ...state.connectionInfo, [tabId]: info }
+        }))
+      }
+    } catch (err) {
+      console.error('Failed to load connection info:', err)
+    }
+  },
+
   cleanupTab: (tabId) => {
     set(state => {
       const { [tabId]: _, ...restStatus } = state.connectionStatus
       const { [tabId]: __, ...restMap } = state.tabSessionMap
       const { [tabId]: ___, ...restTime } = state.connectionStartTime
-      return { connectionStatus: restStatus, tabSessionMap: restMap, connectionStartTime: restTime }
+      const { [tabId]: ____, ...restInfo } = state.connectionInfo
+      return { connectionStatus: restStatus, tabSessionMap: restMap, connectionStartTime: restTime, connectionInfo: restInfo }
     })
   },
 

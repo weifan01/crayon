@@ -881,6 +881,15 @@ func (a *App) NeedLocalEcho(tabId string) bool {
 	return true
 }
 
+// GetConnectionInfo 获取连接详情
+func (a *App) GetConnectionInfo(tabId string) map[string]string {
+	info, err := a.connManager.GetConnectionInfo(tabId)
+	if err != nil {
+		return nil
+	}
+	return info
+}
+
 // Command 相关方法
 
 // ListCommands 列出所有命令

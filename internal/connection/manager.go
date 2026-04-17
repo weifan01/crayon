@@ -113,3 +113,16 @@ func (m *Manager) CountByStatus(status ConnectionStatus) int {
 	}
 	return count
 }
+
+// GetConnectionInfo 获取连接详情
+func (m *Manager) GetConnectionInfo(id string) (map[string]string, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	conn, exists := m.connections[id]
+	if !exists {
+		return nil, errors.New("connection not found")
+	}
+
+	return conn.GetConnectionInfo()
+}

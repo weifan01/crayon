@@ -204,3 +204,18 @@ func (c *SerialConnection) Resize(cols, rows int) error {
 func (c *SerialConnection) NeedLocalEcho() bool {
 	return true
 }
+
+// GetConnectionInfo 获取连接详情
+func (c *SerialConnection) GetConnectionInfo() (map[string]string, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.portHandle == nil {
+		return nil, errors.New("not connected")
+	}
+
+	return map[string]string{
+		"port":     c.port,
+		"baudRate": fmt.Sprintf("%d", c.baudRate),
+	}, nil
+}

@@ -22,7 +22,7 @@ function formatTime(date: Date): string {
 
 export function StatusBar() {
   const { activeTabId, tabs, cursorPositions } = useTerminalStore()
-  const { sessions, getTabStatus, getConnectionDuration } = useSessionStore()
+  const { sessions, getTabStatus, getConnectionDuration, connectionInfo, loadConnectionInfo } = useSessionStore()
   const { t } = useLocale()
   const [currentTime, setCurrentTime] = useState(new Date())
   const [connectionDuration, setConnectionDuration] = useState(0)
@@ -59,6 +59,14 @@ export function StatusBar() {
   const session = activePane ? sessions.find((s: any) => s.id === activePane.sessionId) : null
   const status = activePane ? getTabStatus(activePane.id) : 'disconnected'
   const cursorPos = activePane ? cursorPositions[activePane.id] : null
+  const connInfo = activePane ? connectionInfo[activePane.id] : null
+
+  // 加载连接信息（SSH协议版本等）
+  useEffect(() => {
+    if (activePane && status === 'connected') {
+      loadConnectionInfo(activePane.id)
+    }
+  }, [activePane?.id, status, loadConnectionInfo])
 
   const cfg: Record<string, { text: string; color: string; dot: string }> = {
     connected: { text: t('status.connected'), color: 'text-green-400', dot: 'bg-green-400' },
@@ -70,18 +78,48 @@ export function StatusBar() {
 
   return (
     <div className="h-6 bg-surface-1 border-t border-surface-2 flex items-center px-3 text-xs gap-4">
-      {/* 左侧：连接状态和SSH信息 */}
+      {/* 左侧：连接状态 */}
       <div className="flex items-center gap-1.5">
         <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
         <span className={s.color}>{s.text}</span>
       </div>
+
+      {/* 根据协议类型显示不同信息 */}
       {session && (
         <>
           <span className="text-text-muted">|</span>
           <span className="text-text-secondary">{(session as any).protocol?.toUpperCase()}</span>
-          <span className="text-text-primary">{(session as any).host}:{(session as any).port}</span>
+
+          {/* SSH: 显示主机:端口 + 协议版本 */}
+          {(session as any).protocol === 'ssh' && (
+            <>
+              <span className="text-text-primary">{(session as any).host}:{(session as any).port}</span>
+              {connInfo && connInfo.serverVersion && (
+                <>
+                  <span className="text-text-muted">|</span>
+                  <span className="text-text-primary font-mono">{connInfo.serverVersion}</span>
+                </>
+              )}
+            </>
+          )}
+
+          {/* Telnet: 显示主机:端口 */}
+          {(session as any).protocol === 'telnet' && (
+            <span className="text-text-primary">{(session as any).host}:{(session as any).port}</span>
+          )}
+
+          {/* Serial: 显示串口路径 + 波特率 */}
+          {(session as any).protocol === 'serial' && connInfo && (
+            <span className="text-text-primary font-mono">{connInfo.port} @ {connInfo.baudRate}</span>
+          )}
+
+          {/* Local: 显示 Shell 类型 */}
+          {(session as any).protocol === 'local' && connInfo && (
+            <span className="text-text-primary font-mono">{connInfo.shell}</span>
+          )}
         </>
       )}
+
       {/* 连接时长 */}
       {status === 'connected' && connectionDuration > 0 && (
         <>

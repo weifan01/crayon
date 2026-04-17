@@ -94,6 +94,10 @@ export function GetCommand(arg1) {
   return window['go']['main']['App']['GetCommand'](arg1);
 }
 
+export function GetConnectionInfo(arg1) {
+  return window['go']['main']['App']['GetConnectionInfo'](arg1);
+}
+
 export function GetHomeDir() {
   return window['go']['main']['App']['GetHomeDir']();
 }

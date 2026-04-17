@@ -207,6 +207,7 @@ export const api = {
   resizeTab: (tabId: string, cols: number, rows: number): Promise<void> =>
     getWailsAPI().ResizeTab(tabId, cols, rows),
   needLocalEcho: (tabId: string): Promise<boolean> => getWailsAPI().NeedLocalEcho(tabId),
+  getConnectionInfo: (tabId: string): Promise<Record<string, string>> => getWailsAPI().GetConnectionInfo(tabId),
 
   // Command 管理
   listCommands: (): Promise<Command[]> => getWailsAPI().ListCommands(),

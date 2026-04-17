@@ -116,6 +116,8 @@ type Connection interface {
 	// NeedLocalEcho 返回是否需要本地回显
 	// Telnet 连接根据协商结果返回，SSH 和 Serial 返回 false
 	NeedLocalEcho() bool
+	// GetConnectionInfo 获取连接详情（可选实现）
+	GetConnectionInfo() (map[string]string, error)
 }
 
 // SSHConnection SSH 连接实现
@@ -509,4 +511,21 @@ func (c *SSHConnection) ExecuteCommand(cmd string) (string, error) {
 // NeedLocalEcho SSH 连接不需要本地回显，SSH 协议自动处理
 func (c *SSHConnection) NeedLocalEcho() bool {
 	return false
+}
+
+// GetConnectionInfo 获取 SSH 连接详情
+func (c *SSHConnection) GetConnectionInfo() (map[string]string, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.client == nil {
+		return nil, errors.New("not connected")
+	}
+
+	return map[string]string{
+		"serverVersion": string(c.client.ServerVersion()),
+		"clientVersion": string(c.client.ClientVersion()),
+		"user":          c.client.User(),
+		"remoteAddr":    c.client.RemoteAddr().String(),
+	}, nil
 }
