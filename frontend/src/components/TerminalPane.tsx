@@ -270,6 +270,10 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
         ref.current.appendChild(terminalElement)
         requestAnimationFrame(() => {
           fitRef.current?.fit()
+          // 更新 pane 尺寸到 store
+          if (termRef.current) {
+            useTerminalStore.getState().updatePaneSize(tabId, paneId, termRef.current.cols, termRef.current.rows)
+          }
           // 如果是活动标签页，聚焦终端
           if (isActive && termRef.current) {
             termRef.current.focus()
@@ -334,12 +338,15 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
       setSearchAddonReady(true)
 
       requestAnimationFrame(() => {
-        if (fitRef.current) {
+        if (fitRef.current && termRef.current) {
           fitRef.current.fit()
+          // 立即更新 pane 尺寸到 store
+          useTerminalStore.getState().updatePaneSize(tabId, paneId, termRef.current.cols, termRef.current.rows)
         }
         requestAnimationFrame(() => {
-          if (fitRef.current) {
+          if (fitRef.current && termRef.current) {
             fitRef.current.fit()
+            useTerminalStore.getState().updatePaneSize(tabId, paneId, termRef.current.cols, termRef.current.rows)
           }
           // 如果是活动标签页，聚焦终端
           if (isActive && termRef.current) {

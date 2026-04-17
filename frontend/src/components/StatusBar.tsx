@@ -21,7 +21,7 @@ function formatTime(date: Date): string {
 }
 
 export function StatusBar() {
-  const { activeTabId, getTab, cursorPositions } = useTerminalStore()
+  const { activeTabId, tabs, cursorPositions } = useTerminalStore()
   const { sessions, getTabStatus, getConnectionDuration } = useSessionStore()
   const { t } = useLocale()
   const [currentTime, setCurrentTime] = useState(new Date())
@@ -41,7 +41,7 @@ export function StatusBar() {
       setConnectionDuration(0)
       return
     }
-    const tab = getTab(activeTabId)
+    const tab = tabs.find(t => t.id === activeTabId)
     if (!tab) {
       setConnectionDuration(0)
       return
@@ -52,9 +52,9 @@ export function StatusBar() {
       setConnectionDuration(getConnectionDuration(tab.activePaneId))
     }, 1000)
     return () => clearInterval(timer)
-  }, [activeTabId, getTab, getConnectionDuration])
+  }, [activeTabId, tabs, getConnectionDuration])
 
-  const tab = activeTabId ? getTab(activeTabId) : null
+  const tab = activeTabId ? tabs.find(t => t.id === activeTabId) : null
   const activePane = tab ? findPane(tab.rootPane, tab.activePaneId) : null
   const session = activePane ? sessions.find((s: any) => s.id === activePane.sessionId) : null
   const status = activePane ? getTabStatus(activePane.id) : 'disconnected'
