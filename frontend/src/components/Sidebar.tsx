@@ -3,7 +3,7 @@ import { useSessionStore } from '../stores/sessionStore'
 import { useSidebarSettings } from '../stores/sidebarSettingsStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useLocale } from '../stores/localeStore'
-import { Plus, Folder, Edit3, Trash2, Copy, MoveRight, ChevronRight, ChevronDown, Pin, GripVertical, Settings, FolderPlus, Terminal, Zap, ListTree, ListMinus, Server, Wifi, Usb, Lock, Key, Fingerprint, Play } from 'lucide-react'
+import { Plus, Folder, Edit3, Trash2, Copy, MoveRight, ChevronRight, ChevronDown, Pin, GripVertical, Settings, FolderPlus, Terminal, Zap, ListTree, ListMinus, Server, Wifi, Usb, Lock, Key, Fingerprint, Play, X } from 'lucide-react'
 import type { Session, GroupNode } from '../api/wails'
 import { api } from '../api/wails'
 import { GroupManager } from './GroupManager'
@@ -31,7 +31,7 @@ interface GroupContextMenuState {
 }
 
 export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }: Props) {
-  const { sessions, groups, groupsTree, loading, loadSessions, loadGroups, loadGroupsTree, createSession, updateSession, deleteSession, cloneSession, searchSessions, getSessionStatus, confirmDialog } = useSessionStore()
+  const { sessions, groups, groupsTree, loading, loadSessions, loadGroups, loadGroupsTree, createSession, updateSession, deleteSession, cloneSession, searchSessions, getSessionStatus, confirmDialog, updateGroup } = useSessionStore()
   const { sidebar, setSidebarWidth, setSidebarMode } = useSidebarSettings()
   const { sidebarTagSettings } = useSettingsStore()
   const { t } = useLocale()
@@ -41,10 +41,15 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
   const [showGroups, setShowGroups] = useState(false)
   const [showCommands, setShowCommands] = useState(false)
   const [showQuickConnect, setShowQuickConnect] = useState(false)
+  const [showRenameDialog, setShowRenameDialog] = useState(false)
+  const [showSubGroupDialog, setShowSubGroupDialog] = useState(false)
   const [edit, setEdit] = useState<Partial<Session>>({})
   const [isNew, setIsNew] = useState(false)
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
+  const [newGroupName, setNewGroupName] = useState('')
+  const [renameGroupTarget, setRenameGroupTarget] = useState<{ id: string, name: string } | null>(null)
+  const [subGroupParentPath, setSubGroupParentPath] = useState<string>('')
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const [groupContextMenu, setGroupContextMenu] = useState<GroupContextMenuState | null>(null)
   const [isResizing, setIsResizing] = useState(false)
@@ -298,18 +303,28 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
   }
 
   // 新建子目录
-  const handleCreateSubGroup = async () => {
+  const handleCreateSubGroup = () => {
     if (!groupContextMenu) return
-    const newName = window.prompt(t('sidebar.newGroup'))
-    if (!newName || !newName.trim()) return
+    setSubGroupParentPath(groupContextMenu.group.group.id)
+    setNewGroupName('')
+    setShowSubGroupDialog(true)
+    setGroupContextMenu(null)
+  }
+
+  // 确认新建子目录
+  const handleConfirmSubGroup = async () => {
+    if (!newGroupName.trim()) return
+    if (!subGroupParentPath) return
     try {
-      await api.createGroup(newName.trim(), groupContextMenu.group.group.id)
+      await api.createGroup(newGroupName.trim(), subGroupParentPath)
       loadGroups()
       loadGroupsTree()
     } catch (e) {
       alert(t('group.createFailed') + ': ' + e)
     }
-    setGroupContextMenu(null)
+    setShowSubGroupDialog(false)
+    setSubGroupParentPath('')
+    setNewGroupName('')
   }
 
   // 连接目录下所有会话
@@ -363,6 +378,41 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
       alert(t('group.deleteFailed') + ': ' + e)
     }
     setGroupContextMenu(null)
+  }
+
+  // 重命名目录
+  const handleRenameGroup = () => {
+    if (!groupContextMenu) {
+      console.log('handleRenameGroup: groupContextMenu is null')
+      return
+    }
+    const group = groupContextMenu.group.group
+    setRenameGroupTarget({ id: group.id, name: group.name })
+    setNewGroupName(group.name)
+    setShowRenameDialog(true)
+    setGroupContextMenu(null)
+  }
+
+  // 确认重命名
+  const handleConfirmRename = async () => {
+    if (!newGroupName.trim()) return
+    if (!renameGroupTarget) return
+    if (newGroupName.trim() === renameGroupTarget.name) {
+      setShowRenameDialog(false)
+      setRenameGroupTarget(null)
+      setNewGroupName('')
+      return
+    }
+    try {
+      await updateGroup(renameGroupTarget.id, newGroupName.trim())
+      loadGroups()
+      loadGroupsTree()
+    } catch (e) {
+      alert(t('group.renameFailed') + ': ' + e)
+    }
+    setShowRenameDialog(false)
+    setRenameGroupTarget(null)
+    setNewGroupName('')
   }
 
   // 多选处理
@@ -1332,6 +1382,14 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
             <Terminal size={14} className={sidebarTagSettings.coloredIcons ? 'text-purple-400' : ''} /> {t('sidebar.connectAll')}
           </div>
           <div className="border-t border-surface-2 my-1" />
+          {/* 重命名 */}
+          <div
+            className="px-3 py-2 text-sm text-text-primary hover:bg-surface-2 flex items-center gap-2 cursor-pointer"
+            onClick={handleRenameGroup}
+          >
+            <Edit3 size={14} className={sidebarTagSettings.coloredIcons ? 'text-accent-yellow' : ''} /> {t('sidebar.renameGroup')}
+          </div>
+          {/* 删除 */}
           <div
             className="px-3 py-2 text-sm text-accent-red hover:bg-surface-2 flex items-center gap-2 cursor-pointer"
             onClick={handleDeleteGroup}
@@ -1352,6 +1410,97 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
             onQuickConnect?.(id)
           }}
         />
+      )}
+
+      {/* 重命名目录对话框 */}
+      {showRenameDialog && (
+        <div className="fixed inset-0 flex items-center justify-center z-[9999]" onClick={() => setShowRenameDialog(false)}>
+          <div
+            className="dialog-panel"
+            style={{ width: 320 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 头部 */}
+            <div className="p-4 border-b border-surface-2 flex items-center justify-between">
+              <h2 className="text-base font-semibold text-text-primary">{t('sidebar.renameGroup')}</h2>
+              <button
+                onClick={() => setShowRenameDialog(false)}
+                className="p-1 hover:bg-surface-2 rounded text-text-muted"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            {/* 内容 */}
+            <div className="p-4">
+              <input
+                type="text"
+                value={newGroupName}
+                onChange={(e) => setNewGroupName(e.target.value)}
+                className="input-field w-full"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleConfirmRename()
+                  if (e.key === 'Escape') setShowRenameDialog(false)
+                }}
+              />
+            </div>
+            {/* 底部 */}
+            <div className="p-4 border-t border-surface-2 flex justify-end gap-3">
+              <button className="btn btn-secondary" onClick={() => setShowRenameDialog(false)}>
+                {t('common.cancel')}
+              </button>
+              <button className="btn btn-primary" onClick={handleConfirmRename}>
+                {t('common.confirm')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 新建子目录对话框 */}
+      {showSubGroupDialog && (
+        <div className="fixed inset-0 flex items-center justify-center z-[9999]" onClick={() => setShowSubGroupDialog(false)}>
+          <div
+            className="dialog-panel"
+            style={{ width: 320 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 头部 */}
+            <div className="p-4 border-b border-surface-2 flex items-center justify-between">
+              <h2 className="text-base font-semibold text-text-primary">{t('sidebar.newSubGroup')}</h2>
+              <button
+                onClick={() => setShowSubGroupDialog(false)}
+                className="p-1 hover:bg-surface-2 rounded text-text-muted"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            {/* 内容 */}
+            <div className="p-4">
+              <input
+                type="text"
+                value={newGroupName}
+                onChange={(e) => setNewGroupName(e.target.value)}
+                className="input-field w-full"
+                autoFocus
+                placeholder={t('sidebar.newGroupPlaceholder')}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleConfirmSubGroup()
+                  if (e.key === 'Escape') setShowSubGroupDialog(false)
+                }}
+              />
+            </div>
+            {/* 底部 */}
+            <div className="p-4 border-t border-surface-2 flex justify-end gap-3">
+              <button className="btn btn-secondary" onClick={() => setShowSubGroupDialog(false)}>
+                {t('common.cancel')}
+              </button>
+              <button className="btn btn-primary" onClick={handleConfirmSubGroup}>
+                {t('common.confirm')}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
