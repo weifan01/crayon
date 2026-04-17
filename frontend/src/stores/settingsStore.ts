@@ -16,6 +16,7 @@ interface TerminalSettings {
 interface SidebarTagSettings {
   showProtocol: boolean      // 显示协议标签
   showAuthType: boolean      // 显示认证类型标签
+  coloredIcons: boolean      // 彩色图标
 }
 
 // 快捷键配置
@@ -125,6 +126,7 @@ const defaultTerminalSettings: TerminalSettings = {
 const defaultSidebarTagSettings: SidebarTagSettings = {
   showProtocol: true,
   showAuthType: false,
+  coloredIcons: true,
 }
 
 // 加载终端设置

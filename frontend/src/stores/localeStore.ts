@@ -62,6 +62,10 @@ const zh: Record<string, string> = {
   'sidebar.showAuthTypeTag': '显示认证类型标签',
   'sidebar.showAuthTypeTagDesc': '在SSH会话中显示认证类型标签（密码/密钥）',
 
+  // 彩色图标设置
+  'settings.coloredIcons': '彩色图标',
+  'settings.coloredIconsDesc': '为侧边栏和页面图标添加颜色',
+
   // 会话设置
   'session.serialPath': '串口路径',
   'session.baudRate': '波特率',
@@ -512,6 +516,10 @@ const en: Record<string, string> = {
   'sidebar.showProtocolTagDesc': 'Display protocol type tags in session list (SSH/Telnet/Serial)',
   'sidebar.showAuthTypeTag': 'Show Auth Type Tag',
   'sidebar.showAuthTypeTagDesc': 'Display authentication type tags for SSH sessions (Password/Key)',
+
+  // Colored icons settings
+  'settings.coloredIcons': 'Colored Icons',
+  'settings.coloredIconsDesc': 'Add colors to sidebar and page icons',
 
   // Session settings
   'session.serialPath': 'Serial Path',

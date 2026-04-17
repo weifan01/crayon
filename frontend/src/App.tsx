@@ -76,6 +76,7 @@ function App() {
   const [showQuickConnect, setShowQuickConnect] = useState(false)
   const { sessions } = useSessionStore()
   const { tabs, activeTabId, createTab, setActiveTab } = useTerminalStore()
+  const { sidebarTagSettings } = useSettingsStore()
   const { t } = useLocale()
   const renderedTabsRef = useRef<Set<string>>(new Set())
   const appRef = useRef<HTMLDivElement>(null)
@@ -388,7 +389,7 @@ function App() {
                     onClick={() => setShowQuickConnect(true)}
                     title={t('welcome.clickToConnect')}
                   >
-                    <Zap size={40} style={{ color: 'var(--accent)' }} />
+                    <Zap size={40} style={{ color: sidebarTagSettings.coloredIcons ? 'var(--accent)' : 'var(--text-secondary)' }} />
                   </div>
                   <p className="text-2xl mb-3 text-text-secondary font-semibold">{APP_NAME}</p>
                 </div>

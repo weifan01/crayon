@@ -944,10 +944,10 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
             </button>
           </div>
         )}
-        <button onClick={() => setShowQuickConnect(true)} className="sidebar-item text-sm"><Zap size={16} /><span>{t('sidebar.quickConnect')}</span></button>
-        <button onClick={handleNew} className="sidebar-item text-sm"><Plus size={16} /><span>{t('sidebar.newSession')}</span></button>
-        <button onClick={() => setShowGroups(true)} className="sidebar-item text-sm"><FolderPlus size={16} /><span>{t('sidebar.groupManage')}</span></button>
-        <button onClick={() => setShowCommands(true)} className="sidebar-item text-sm"><Terminal size={16} /><span>{t('sidebar.commandLibrary')}</span></button>
+        <button onClick={() => setShowQuickConnect(true)} className="sidebar-item text-sm"><Zap size={16} className={sidebarTagSettings.coloredIcons ? 'text-accent-yellow' : ''} /><span>{t('sidebar.quickConnect')}</span></button>
+        <button onClick={handleNew} className="sidebar-item text-sm"><Plus size={16} className={sidebarTagSettings.coloredIcons ? 'text-accent-green' : ''} /><span>{t('sidebar.newSession')}</span></button>
+        <button onClick={() => setShowGroups(true)} className="sidebar-item text-sm"><FolderPlus size={16} className={sidebarTagSettings.coloredIcons ? 'text-accent-blue' : ''} /><span>{t('sidebar.groupManage')}</span></button>
+        <button onClick={() => setShowCommands(true)} className="sidebar-item text-sm"><Terminal size={16} className={sidebarTagSettings.coloredIcons ? 'text-purple-400' : ''} /><span>{t('sidebar.commandLibrary')}</span></button>
         <button onClick={onOpenSettings} className="sidebar-item text-sm"><Settings size={16} /><span>{t('sidebar.settings')}</span></button>
       </div>
 
@@ -1093,7 +1093,7 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
                 className="w-full px-3 py-2 text-sm text-text-primary hover:bg-surface-2 flex items-center gap-2 cursor-pointer"
                 onClick={() => { handleBatchConnect(); setContextMenu(null); }}
               >
-                <Play size={14} /> {t('batch.connect')}
+                <Play size={14} className={sidebarTagSettings.coloredIcons ? 'text-accent-green' : ''} /> {t('batch.connect')}
               </div>
               <div className="border-t border-surface-2 my-1" />
               {/* 移动到分组 */}
@@ -1103,7 +1103,7 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
                   onMouseEnter={() => setContextMenu(prev => prev ? { ...prev, groupMenuMode: 'move' } : null)}
                 >
                   <div className="flex items-center gap-2">
-                    <MoveRight size={14} /> {t('batch.moveToGroup')}
+                    <MoveRight size={14} className={sidebarTagSettings.coloredIcons ? 'text-accent-yellow' : ''} /> {t('batch.moveToGroup')}
                   </div>
                   <ChevronRight size={14} />
                 </div>
@@ -1137,7 +1137,7 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
                   onMouseEnter={() => setContextMenu(prev => prev ? { ...prev, groupMenuMode: 'copy' } : null)}
                 >
                   <div className="flex items-center gap-2">
-                    <Copy size={14} /> {t('batch.copyToGroup')}
+                    <Copy size={14} className={sidebarTagSettings.coloredIcons ? 'text-accent-green' : ''} /> {t('batch.copyToGroup')}
                   </div>
                   <ChevronRight size={14} />
                 </div>
@@ -1179,13 +1179,13 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
                 className="w-full px-3 py-2 text-sm text-text-primary hover:bg-surface-2 flex items-center gap-2 cursor-pointer"
                 onClick={() => { handleEdit(contextMenu.session); setContextMenu(null); }}
               >
-                <Edit3 size={14} /> {t('common.edit')}
+                <Edit3 size={14} className={sidebarTagSettings.coloredIcons ? 'text-accent-blue' : ''} /> {t('common.edit')}
               </div>
               <div
                 className="w-full px-3 py-2 text-sm text-text-primary hover:bg-surface-2 flex items-center gap-2 cursor-pointer"
                 onClick={() => { handleClone(contextMenu.session); setContextMenu(null); }}
               >
-                <Copy size={14} /> {t('common.clone')}
+                <Copy size={14} className={sidebarTagSettings.coloredIcons ? 'text-accent-green' : ''} /> {t('common.clone')}
               </div>
 
               <div className="relative">
@@ -1194,7 +1194,7 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
                   onMouseEnter={() => setContextMenu(prev => prev ? { ...prev, groupMenuMode: 'move' } : null)}
                 >
                   <div className="flex items-center gap-2">
-                    <MoveRight size={14} /> {t('sidebar.moveToGroup')}
+                    <MoveRight size={14} className={sidebarTagSettings.coloredIcons ? 'text-accent-yellow' : ''} /> {t('sidebar.moveToGroup')}
                   </div>
                   <ChevronRight size={14} />
                 </div>
@@ -1228,7 +1228,7 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
                   onMouseEnter={() => setContextMenu(prev => prev ? { ...prev, groupMenuMode: 'copy' } : null)}
                 >
                   <div className="flex items-center gap-2">
-                    <Copy size={14} /> {t('sidebar.copyToGroup')}
+                    <Copy size={14} className={sidebarTagSettings.coloredIcons ? 'text-accent-green' : ''} /> {t('sidebar.copyToGroup')}
                   </div>
                   <ChevronRight size={14} />
                 </div>
@@ -1316,20 +1316,20 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
               setShow(true)
             }}
           >
-            <Plus size={14} /> {t('sidebar.newSession')}
+            <Plus size={14} className={sidebarTagSettings.coloredIcons ? 'text-accent-green' : ''} /> {t('sidebar.newSession')}
           </div>
           {/* 新建子目录 */}
           <div
             className="px-3 py-2 text-sm text-text-primary hover:bg-surface-2 flex items-center gap-2 cursor-pointer"
             onClick={handleCreateSubGroup}
           >
-            <FolderPlus size={14} /> {t('sidebar.newSubGroup')}
+            <FolderPlus size={14} className={sidebarTagSettings.coloredIcons ? 'text-accent-blue' : ''} /> {t('sidebar.newSubGroup')}
           </div>
           <div
             className="px-3 py-2 text-sm text-text-primary hover:bg-surface-2 flex items-center gap-2 cursor-pointer"
             onClick={handleConnectAllSessions}
           >
-            <Terminal size={14} /> {t('sidebar.connectAll')}
+            <Terminal size={14} className={sidebarTagSettings.coloredIcons ? 'text-purple-400' : ''} /> {t('sidebar.connectAll')}
           </div>
           <div className="border-t border-surface-2 my-1" />
           <div

@@ -736,6 +736,37 @@ export function SettingsPanel({ onClose }: Props) {
                     />
                   </button>
                 </div>
+
+                {/* 彩色图标 */}
+                <div
+                  className="flex items-center justify-between p-4 rounded-xl"
+                  style={{ backgroundColor: theme.ui.surface1 }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg" style={{ backgroundColor: theme.ui.surface2 }}>
+                      <Palette size={18} style={{ color: theme.ui.accent }} />
+                    </div>
+                    <div>
+                      <div className="font-medium" style={{ color: theme.ui.textPrimary }}>{t('settings.coloredIcons')}</div>
+                      <div className="text-xs mt-0.5" style={{ color: theme.ui.textMuted }}>
+                        {t('settings.coloredIconsDesc')}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setSidebarTagSettings({ coloredIcons: !sidebarTagSettings.coloredIcons })}
+                    className="relative w-11 h-6 rounded-full transition-colors duration-200"
+                    style={{ backgroundColor: sidebarTagSettings.coloredIcons ? theme.ui.accent : theme.ui.surface3 }}
+                  >
+                    <div
+                      className="absolute top-1 w-4 h-4 rounded-full transition-transform duration-200"
+                      style={{
+                        backgroundColor: '#fff',
+                        transform: sidebarTagSettings.coloredIcons ? 'translateX(22px)' : 'translateX(4px)'
+                      }}
+                    />
+                  </button>
+                </div>
               </div>
 
               <h3 className="text-sm font-medium mb-4 mt-6" style={{ color: theme.ui.textSecondary }}>
