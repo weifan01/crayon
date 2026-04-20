@@ -1414,11 +1414,10 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
 
       {/* 重命名目录对话框 */}
       {showRenameDialog && (
-        <div className="fixed inset-0 flex items-center justify-center z-[9999]" onClick={() => setShowRenameDialog(false)}>
+        <div className="fixed inset-0 flex items-center justify-center z-[9999]">
           <div
             className="dialog-panel flex flex-col"
             style={{ width: 280 }}
-            onClick={(e) => e.stopPropagation()}
           >
             {/* 头部 */}
             <div className="p-4 border-b border-surface-2 flex items-center">
@@ -1459,11 +1458,10 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
 
       {/* 新建子目录对话框 */}
       {showSubGroupDialog && (
-        <div className="fixed inset-0 flex items-center justify-center z-[9999]" onClick={() => setShowSubGroupDialog(false)}>
+        <div className="fixed inset-0 flex items-center justify-center z-[9999]">
           <div
             className="dialog-panel flex flex-col"
             style={{ width: 280 }}
-            onClick={(e) => e.stopPropagation()}
           >
             {/* 头部 */}
             <div className="p-4 border-b border-surface-2 flex items-center">
