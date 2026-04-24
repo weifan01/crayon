@@ -204,6 +204,8 @@ export const api = {
   disconnectTab: (tabId: string): Promise<void> => getWailsAPI().DisconnectTab(tabId),
   getTabStatus: (tabId: string): Promise<string> => getWailsAPI().GetTabStatus(tabId),
   sendToTab: (tabId: string, data: string): Promise<void> => getWailsAPI().SendToTab(tabId, data),
+  sendToTabBinary: (tabId: string, base64Data: string): Promise<void> =>
+    getWailsAPI().SendToTabBinary(tabId, base64Data),
   resizeTab: (tabId: string, cols: number, rows: number): Promise<void> =>
     getWailsAPI().ResizeTab(tabId, cols, rows),
   needLocalEcho: (tabId: string): Promise<boolean> => getWailsAPI().NeedLocalEcho(tabId),
@@ -238,7 +240,15 @@ export const api = {
     getWailsAPI().SaveFile(title, defaultFilename, defaultPath),
   selectFile: (title: string, defaultPath: string, filters: string): Promise<string> =>
     getWailsAPI().SelectFile(title, defaultPath, filters),
+  selectFiles: (title: string, defaultPath: string, filters: string): Promise<string[]> =>
+    getWailsAPI().SelectFiles(title, defaultPath, filters),
+  selectDirectory: (title: string, defaultPath: string): Promise<string> =>
+    getWailsAPI().SelectDirectory(title, defaultPath),
+  getHomeDir: (): Promise<string> =>
+    getWailsAPI().GetHomeDir(),
+  readFile: (path: string): Promise<number[]> => getWailsAPI().ReadFile(path),
   writeFileString: (path: string, data: string): Promise<void> => getWailsAPI().WriteFileString(path, data),
+  writeFile: (path: string, data: number[]): Promise<void> => getWailsAPI().WriteFile(path, data),
   readFileString: (path: string): Promise<string> => getWailsAPI().ReadFileString(path),
   readFileBase64: (path: string): Promise<string> => getWailsAPI().ReadFileBase64(path),
 

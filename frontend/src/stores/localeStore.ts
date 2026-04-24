@@ -6,7 +6,7 @@ export type Language = 'zh' | 'en'
 interface LocaleState {
   language: Language
   setLanguage: (lang: Language) => void
-  t: (key: string) => string
+  t: (key: string, vars?: Record<string, string | number>) => string
 }
 
 // 中文翻译
@@ -369,12 +369,48 @@ const zh: Record<string, string> = {
 
   // 终端消息
   'terminal.connected': '连接成功',
+  'terminal.reconnecting': '正在重新连接...',
   'terminal.connectFailed': '连接失败',
   'terminal.retryHint': '按回车键重试',
   'terminal.sessionNotFound': '无法获取会话信息',
   'terminal.noConnectedSessions': '没有已连接的会话',
   'terminal.selectSessions': '请选择至少一个会话',
   'terminal.enterCommand': '请输入命令',
+  'zmodem.detectUpload': '检测到远端 rz，准备上传文件。',
+  'zmodem.detectDownload': '检测到远端 sz，准备接收文件。',
+  'zmodem.transferEnded': '传输结束。',
+  'zmodem.transferFailed': '传输失败: {error}',
+  'zmodem.receiveFailed': '接收文件失败: {error}',
+  'zmodem.sendBinaryFailed': '发送 Zmodem 数据失败: {error}',
+  'zmodem.handshakeRetracted': '检测到的 Zmodem 握手已撤销。',
+  'zmodem.openUploadDialog': '正在打开文件选择对话框...',
+  'zmodem.selectUploadFilesTitle': '选择要通过 Zmodem 上传的文件',
+  'zmodem.selectDownloadDirTitle': '选择 Zmodem 下载目录',
+  'zmodem.noFilesSelected': '未选择文件，已取消上传。',
+  'zmodem.filesSelected': '已选择 {count} 个文件，准备发送 ZFILE。',
+  'zmodem.sendingFileInfo': '开始发送文件信息: {file} ({size} 字节)。',
+  'zmodem.remoteSkippedFile': '远端跳过了文件 {file}。',
+  'zmodem.skippedFile': '已跳过 {file}。',
+  'zmodem.uploadedFile': '已上传 {file} ({size} 字节)。',
+  'zmodem.savedFile': '已保存 {file} 到 {path}。',
+  'zmodem.retryRequested': '接收端请求从偏移 {offset} 重传 {file}（第 {count} 次）。',
+  'zmodem.retryMissingContext': '接收端请求从 {offset} 重传，但当前没有可重传的文件上下文。',
+  'zmodem.retryInvalidOffset': '接收端请求了非法重传偏移 {offset}。',
+  'zmodem.progress.directionUpload': '上传',
+  'zmodem.progress.directionDownload': '下载',
+  'zmodem.progress.waitingPeer': '等待远端接收文件...',
+  'zmodem.progress.waitingRemote': '等待远端发送文件...',
+  'zmodem.progress.uploading': '正在上传...',
+  'zmodem.progress.downloading': '正在下载...',
+  'zmodem.progress.finalChunk': '正在发送最后数据块...',
+  'zmodem.progress.awaitingPeerConfirm': '文件上传完成，等待远端确认...',
+  'zmodem.progress.downloadComplete': '文件下载完成，正在写入磁盘...',
+  'zmodem.progress.completed': '传输完成。',
+  'zmodem.progress.cancelled': '传输已取消。',
+  'zmodem.progress.skipped': '远端已跳过该文件。',
+  'zmodem.progress.retrying': '正在从 {offset} 位置重传...',
+  'zmodem.progress.retryCount': '重传 {count} 次',
+  'zmodem.cancel': '取消',
 
   // 快速连接
   'quickConnect.title': '快速连接',
@@ -826,12 +862,48 @@ const en: Record<string, string> = {
 
   // Terminal messages
   'terminal.connected': 'Connected successfully',
+  'terminal.reconnecting': 'Reconnecting...',
   'terminal.connectFailed': 'Connection failed',
   'terminal.retryHint': 'Press Enter to retry',
   'terminal.sessionNotFound': 'Unable to get session info',
   'terminal.noConnectedSessions': 'No connected sessions',
   'terminal.selectSessions': 'Please select at least one session',
   'terminal.enterCommand': 'Please enter a command',
+  'zmodem.detectUpload': 'Remote rz detected. Preparing upload.',
+  'zmodem.detectDownload': 'Remote sz detected. Preparing download.',
+  'zmodem.transferEnded': 'Transfer ended.',
+  'zmodem.transferFailed': 'Transfer failed: {error}',
+  'zmodem.receiveFailed': 'Receive failed: {error}',
+  'zmodem.sendBinaryFailed': 'Failed to send Zmodem payload: {error}',
+  'zmodem.handshakeRetracted': 'Detected Zmodem handshake was retracted.',
+  'zmodem.openUploadDialog': 'Opening file picker...',
+  'zmodem.selectUploadFilesTitle': 'Select files to upload via Zmodem',
+  'zmodem.selectDownloadDirTitle': 'Select Zmodem download directory',
+  'zmodem.noFilesSelected': 'No files selected. Upload cancelled.',
+  'zmodem.filesSelected': '{count} file(s) selected. Preparing ZFILE.',
+  'zmodem.sendingFileInfo': 'Sending file info: {file} ({size} bytes).',
+  'zmodem.remoteSkippedFile': 'Remote skipped file {file}.',
+  'zmodem.skippedFile': 'Skipped {file}.',
+  'zmodem.uploadedFile': 'Uploaded {file} ({size} bytes).',
+  'zmodem.savedFile': 'Saved {file} to {path}.',
+  'zmodem.retryRequested': 'Receiver requested retransmission of {file} from offset {offset} (attempt {count}).',
+  'zmodem.retryMissingContext': 'Receiver requested retransmission from {offset}, but no upload context is available.',
+  'zmodem.retryInvalidOffset': 'Receiver requested an invalid retransmit offset {offset}.',
+  'zmodem.progress.directionUpload': 'Upload',
+  'zmodem.progress.directionDownload': 'Download',
+  'zmodem.progress.waitingPeer': 'Waiting for the remote peer to receive the file...',
+  'zmodem.progress.waitingRemote': 'Waiting for the remote peer to send the file...',
+  'zmodem.progress.uploading': 'Uploading...',
+  'zmodem.progress.downloading': 'Downloading...',
+  'zmodem.progress.finalChunk': 'Sending the final data chunk...',
+  'zmodem.progress.awaitingPeerConfirm': 'Upload finished, waiting for remote confirmation...',
+  'zmodem.progress.downloadComplete': 'Download finished, writing file to disk...',
+  'zmodem.progress.completed': 'Transfer completed.',
+  'zmodem.progress.cancelled': 'Transfer cancelled.',
+  'zmodem.progress.skipped': 'The remote side skipped this file.',
+  'zmodem.progress.retrying': 'Retransmitting from {offset}...',
+  'zmodem.progress.retryCount': '{count} retransmission(s)',
+  'zmodem.cancel': 'Cancel',
 
   // Quick connect
   'quickConnect.title': 'Quick Connect',
@@ -950,14 +1022,22 @@ export const useLocale = create<LocaleState>((set, get) => ({
     api.setLanguage(lang).catch(err => console.error('Failed to set language in backend:', err))
   },
 
-  t: (key: string) => {
+  t: (key: string, vars?: Record<string, string | number>) => {
     const { language } = get()
-    return translations[language][key] || key
+    const translated = translations[language][key] || key
+    if (!vars) return translated
+    return Object.entries(vars).reduce((result, [name, value]) => {
+      return result.split(`{${name}}`).join(String(value))
+    }, translated)
   },
 }))
 
 // 导出翻译函数供非组件使用
-export function t(key: string, lang?: Language): string {
+export function t(key: string, lang?: Language, vars?: Record<string, string | number>): string {
   const language = lang || loadLanguage()
-  return translations[language][key] || key
+  const translated = translations[language][key] || key
+  if (!vars) return translated
+  return Object.entries(vars).reduce((result, [name, value]) => {
+    return result.split(`{${name}}`).join(String(value))
+  }, translated)
 }

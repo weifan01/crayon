@@ -10,6 +10,7 @@ import { useSettingsStore } from '../stores/settingsStore'
 import { useLocale } from '../stores/localeStore'
 import { findPane, paneExistsInTree } from '../utils/paneUtils'
 import { api } from '../api/wails'
+import { TerminalZmodemController, type ZmodemTransferProgress } from '../utils/zmodem'
 import { TerminalSearchBar } from './TerminalSearchBar'
 
 declare global {
@@ -35,6 +36,7 @@ interface TerminalCache {
   searchAddon: SearchAddon
   dataBuffer: string[]
   eventsRegistered: boolean
+  zmodemController: TerminalZmodemController | null
 }
 
 const terminalCache = new Map<string, TerminalCache>()
@@ -44,12 +46,14 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
   const termRef = useRef<Terminal | null>(null)
   const fitRef = useRef<FitAddon | null>(null)
   const searchAddonRef = useRef<SearchAddon | null>(null)
+  const zmodemRef = useRef<TerminalZmodemController | null>(null)
   const dataBufferRef = useRef<string[]>([])
   const resizeObserverRef = useRef<ResizeObserver | null>(null)
   const [terminalReady, setTerminalReady] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
   const [searchAddonReady, setSearchAddonReady] = useState(false)
   const [backgroundImageData, setBackgroundImageData] = useState<string>('')
+  const [zmodemProgress, setZmodemProgress] = useState<ZmodemTransferProgress | null>(null)
   // 标记是否已注册事件监听
   const eventsRegisteredRef = useRef(false)
 
@@ -151,9 +155,9 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
 
   // 处理缓冲的数据
   const flushBuffer = () => {
-    if (termRef.current && dataBufferRef.current.length > 0) {
+    if (zmodemRef.current && dataBufferRef.current.length > 0) {
       dataBufferRef.current.forEach(data => {
-        termRef.current!.write(data)
+        zmodemRef.current!.consume(data)
       })
       dataBufferRef.current = []
     }
@@ -216,6 +220,22 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
     }
   }, [connectionId, getTabStatus, resizeTab, tabId, paneId])
 
+  const formatTransferBytes = (value: number) => {
+    if (!Number.isFinite(value) || value <= 0) return '0 B'
+    const units = ['B', 'KB', 'MB', 'GB']
+    let size = value
+    let unitIndex = 0
+    while (size >= 1024 && unitIndex < units.length - 1) {
+      size /= 1024
+      unitIndex += 1
+    }
+    return `${size >= 100 || unitIndex === 0 ? size.toFixed(0) : size.toFixed(1)} ${units[unitIndex]}`
+  }
+
+  const progressPercent = zmodemProgress && zmodemProgress.totalBytes > 0
+    ? Math.min(100, Math.max(0, (zmodemProgress.transferredBytes / zmodemProgress.totalBytes) * 100))
+    : 0
+
   // 初始化终端 - 使用缓存机制避免重新挂载时重新连接
   useEffect(() => {
     if (!ref.current) return
@@ -229,6 +249,8 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
       termRef.current = cached.terminal
       fitRef.current = cached.fitAddon
       searchAddonRef.current = cached.searchAddon
+      zmodemRef.current = cached.zmodemController
+      zmodemRef.current?.updateOptions({ onProgress: setZmodemProgress, translate: t })
       dataBufferRef.current = cached.dataBuffer
       eventsRegisteredRef.current = cached.eventsRegistered
       setSearchAddonReady(true)
@@ -335,6 +357,11 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
       termRef.current = term
       fitRef.current = fit
       searchAddonRef.current = searchAddon
+      zmodemRef.current = new TerminalZmodemController(
+        term,
+        (base64Data: string) => api.sendToTabBinary(connectionId, base64Data),
+        { onProgress: setZmodemProgress, translate: t },
+      )
       setSearchAddonReady(true)
 
       requestAnimationFrame(() => {
@@ -359,6 +386,9 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
       term.onData(data => {
         const status = getTabStatus(connectionId)
         if (status === 'connected') {
+          if (zmodemRef.current?.isActive()) {
+            return
+          }
           // 如果需要本地回显，将用户输入写入终端
           if (localEchoRef.current) {
             // 处理换行符：\r 需要转换成 \r\n 才能正确换行
@@ -370,7 +400,7 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
           // 按回车重连
           const currentSessionId = getPaneSessionId()
           if (currentSessionId) {
-            term.writeln('\x1b[1;36m正在重新连接...\x1b[0m')
+            term.writeln('\x1b[1;36m' + t('terminal.reconnecting') + '\x1b[0m')
             setTabStatus(connectionId, 'connecting')
             disconnectTab(connectionId).catch(() => {}).finally(() => {
               connectTab(connectionId, currentSessionId, term.cols, term.rows)
@@ -420,7 +450,8 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
         fitAddon: fit,
         searchAddon: searchAddon,
         dataBuffer: [],
-        eventsRegistered: false
+        eventsRegistered: false,
+        zmodemController: zmodemRef.current
       })
 
       setTerminalReady(true)
@@ -495,10 +526,11 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
         if (cachedData) {
           cachedData.dataBuffer = dataBufferRef.current
           cachedData.eventsRegistered = eventsRegisteredRef.current
+          cachedData.zmodemController = zmodemRef.current
         }
       } else {
         if (eventsRegisteredRef.current && window.runtime) {
-          const dataEvent = `terminal-data-${connectionId}`
+          const dataEvent = `terminal-data-bytes-${connectionId}`
           const disconnectEvent = `terminal-disconnected-${connectionId}`
           const echoChangeEvent = `telnet-echo-change-${connectionId}`
           window.runtime.EventsOff(dataEvent)
@@ -511,8 +543,10 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
           termRef.current = null
         }
         fitRef.current = null
+        zmodemRef.current = null
         dataBufferRef.current = []
         eventsRegisteredRef.current = false
+        setZmodemProgress(null)
         terminalCache.delete(paneId)
       }
     }
@@ -572,18 +606,16 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
     }, 100)
 
     // 注册事件监听（只注册一次）
-    const dataEvent = `terminal-data-${connectionId}`
+    const dataEvent = `terminal-data-bytes-${connectionId}`
     const disconnectEvent = `terminal-disconnected-${connectionId}`
     const echoChangeEvent = `telnet-echo-change-${connectionId}`
 
-    const handleData = (data: string) => {
-      if (termRef.current) {
-        termRef.current.write(data, () => {
-          // 写入后滚动到底部
-          termRef.current?.scrollToBottom()
-        })
+    const handleData = (base64Data: string) => {
+      if (termRef.current && zmodemRef.current) {
+        zmodemRef.current.consume(base64Data)
+        termRef.current.scrollToBottom()
       } else {
-        dataBufferRef.current.push(data)
+        dataBufferRef.current.push(base64Data)
       }
     }
 
@@ -684,6 +716,10 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
     }
   }, [effectiveConfig, effectiveTerminalBg])
 
+  useEffect(() => {
+    zmodemRef.current?.updateOptions({ onProgress: setZmodemProgress, translate: t })
+  }, [t])
+
   // 搜索快捷键 (Cmd+F / Ctrl+F)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -744,6 +780,40 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
             : effectiveConfig.theme.colors.background
         }}
       />
+
+      {zmodemProgress?.visible && (
+        <div className="relative z-20 border-t border-[var(--border-color)] bg-[var(--surface-1)]/92 backdrop-blur-sm px-4 py-2.5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 text-[13px] leading-5 text-text-primary">
+                <span className="font-medium">{zmodemProgress.direction === 'upload' ? t('zmodem.progress.directionUpload') : t('zmodem.progress.directionDownload')}</span>
+                <span className="truncate">{zmodemProgress.fileName}</span>
+              </div>
+              <div className="mt-0.5 text-[11px] leading-4 text-text-secondary flex items-center gap-3 flex-wrap">
+                <span>{zmodemProgress.statusText}</span>
+                <span>{formatTransferBytes(zmodemProgress.transferredBytes)} / {formatTransferBytes(zmodemProgress.totalBytes)}</span>
+                <span>{formatTransferBytes(zmodemProgress.bytesPerSecond)}/s</span>
+                {zmodemProgress.retryCount > 0 && <span>{t('zmodem.progress.retryCount', { count: zmodemProgress.retryCount })}</span>}
+              </div>
+            </div>
+            {(zmodemProgress.state === 'starting' || zmodemProgress.state === 'transferring' || zmodemProgress.state === 'retrying') && (
+              <button
+                type="button"
+                className="shrink-0 rounded-md bg-[var(--accent-red)] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:brightness-110 active:brightness-95"
+                onClick={() => zmodemRef.current?.cancelTransfer()}
+              >
+                {t('zmodem.cancel')}
+              </button>
+            )}
+          </div>
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--surface-3)]">
+            <div
+              className="h-full rounded-full bg-[var(--accent-blue)] transition-all duration-150"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* 底部搜索栏 */}
       {showSearch && searchAddonReady && terminalSettings.searchBarPosition === 'bottom' && (

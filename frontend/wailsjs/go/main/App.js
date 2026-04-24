@@ -242,6 +242,10 @@ export function SendToTab(arg1, arg2) {
   return window['go']['main']['App']['SendToTab'](arg1, arg2);
 }
 
+export function SendToTabBinary(arg1, arg2) {
+  return window['go']['main']['App']['SendToTabBinary'](arg1, arg2);
+}
+
 export function SetLanguage(arg1) {
   return window['go']['main']['App']['SetLanguage'](arg1);
 }

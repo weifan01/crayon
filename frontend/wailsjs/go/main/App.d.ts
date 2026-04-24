@@ -126,6 +126,8 @@ export function SelectFiles(arg1:string,arg2:string,arg3:string):Promise<Array<s
 
 export function SendToTab(arg1:string,arg2:string):Promise<void>;
 
+export function SendToTabBinary(arg1:string,arg2:string):Promise<void>;
+
 export function SetLanguage(arg1:string):Promise<void>;
 
 export function SetLoggingEnabled(arg1:boolean):Promise<void>;

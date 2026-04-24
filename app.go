@@ -801,6 +801,7 @@ func (a *App) readOutputLoop(tabId string, conn connection.Connection) {
 	}()
 
 	eventName := "terminal-data-" + tabId
+	bytesEventName := "terminal-data-bytes-" + tabId
 
 	for {
 		data, err := conn.Receive()
@@ -821,6 +822,7 @@ func (a *App) readOutputLoop(tabId string, conn connection.Connection) {
 				a.logStore.LogOutput(tabId, string(data))
 			}
 			runtime.EventsEmit(a.ctx, eventName, string(data))
+			runtime.EventsEmit(a.ctx, bytesEventName, base64.StdEncoding.EncodeToString(data))
 		}
 	}
 }
@@ -858,6 +860,21 @@ func (a *App) SendToTab(tabId string, data string) error {
 	}
 
 	return conn.Send([]byte(data))
+}
+
+// SendToTabBinary 向标签页发送 base64 编码的二进制数据
+func (a *App) SendToTabBinary(tabId string, base64Data string) error {
+	conn, exists := a.connManager.Get(tabId)
+	if !exists {
+		return fmt.Errorf("tab not connected")
+	}
+
+	data, err := base64.StdEncoding.DecodeString(base64Data)
+	if err != nil {
+		return fmt.Errorf("invalid base64 payload: %w", err)
+	}
+
+	return conn.Send(data)
 }
 
 // ResizeTab 调整标签页终端大小
@@ -1628,7 +1645,7 @@ func (a *App) ImportSecureCRTSessions(sessions []map[string]any) error {
 			User:        user,
 			AuthType:    auth,
 			KeyPath:     keyPath,
-			Password:    "", // 密码清空
+			Password:    "",              // 密码清空
 			Group:       actualGroupPath, // 使用分组的实际路径（/hk 格式）
 			Description: "Imported from SecureCRT",
 		}
