@@ -13,7 +13,7 @@
   "info": {
     "companyName": "Crayon",
     "productName": "Crayon",
-    "productVersion": "v1.1.0",
+    "productVersion": "v1.1.1",
     "copyright": "Copyright © 2026 erpan",
     "comments": "A cross-platform terminal manager built with Wails"
   }

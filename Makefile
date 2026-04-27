@@ -1,6 +1,6 @@
 # Crayon Terminal - Makefile
 
-VERSION   ?= v1.1.0
+VERSION   ?= v1.1.1
 BUILD_TIME := $(shell date +%Y-%m-%d)
 GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
