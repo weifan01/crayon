@@ -352,6 +352,7 @@ export namespace session {
 	    name: string;
 	    parentId: string;
 	    path: string;
+	    sortOrder: number;
 	    createdAt: FlexibleTime;
 	    updatedAt: FlexibleTime;
 	
@@ -365,6 +366,7 @@ export namespace session {
 	        this.name = source["name"];
 	        this.parentId = source["parentId"];
 	        this.path = source["path"];
+	        this.sortOrder = source["sortOrder"];
 	        this.createdAt = this.convertValues(source["createdAt"], FlexibleTime);
 	        this.updatedAt = this.convertValues(source["updatedAt"], FlexibleTime);
 	    }

@@ -108,6 +108,8 @@ export function ReadFileString(arg1:string):Promise<string>;
 
 export function ReadLogFile(arg1:string):Promise<string>;
 
+export function ReorderGroups(arg1:Array<string>):Promise<void>;
+
 export function ResizeTab(arg1:string,arg2:number,arg3:number):Promise<void>;
 
 export function SaveBackgroundImage(arg1:string,arg2:string):Promise<string>;

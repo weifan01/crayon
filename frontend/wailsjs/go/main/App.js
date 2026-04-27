@@ -206,6 +206,10 @@ export function ReadLogFile(arg1) {
   return window['go']['main']['App']['ReadLogFile'](arg1);
 }
 
+export function ReorderGroups(arg1) {
+  return window['go']['main']['App']['ReorderGroups'](arg1);
+}
+
 export function ResizeTab(arg1, arg2, arg3) {
   return window['go']['main']['App']['ResizeTab'](arg1, arg2, arg3);
 }

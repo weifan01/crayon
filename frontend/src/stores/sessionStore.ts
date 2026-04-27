@@ -46,6 +46,7 @@ interface State {
   loadGroupsTree: () => Promise<void>
   createGroup: (name: string, parentId?: string) => Promise<Group>
   updateGroup: (id: string, name: string, parentId?: string) => Promise<Group>
+  reorderGroups: (groupIds: string[]) => Promise<void>
   moveGroup: (id: string, newParentId: string) => Promise<void>
   deleteGroup: (id: string) => Promise<void>
 }
@@ -270,6 +271,12 @@ export const useSessionStore = create<State>((set, get) => ({
     await get().loadGroupsTree()
     await get().loadSessions()
     return group
+  },
+
+  reorderGroups: async (groupIds) => {
+    await api.reorderGroups(groupIds)
+    await get().loadGroups()
+    await get().loadGroupsTree()
   },
 
   moveGroup: async (id, newParentId) => {

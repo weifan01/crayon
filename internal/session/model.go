@@ -123,6 +123,7 @@ type Group struct {
 	Name      string       `json:"name"`
 	ParentID  string       `json:"parentId"`
 	Path      string       `json:"path"`
+	SortOrder int          `json:"sortOrder"`
 	CreatedAt FlexibleTime `json:"createdAt"`
 	UpdatedAt FlexibleTime `json:"updatedAt"`
 }

@@ -97,6 +97,9 @@ func (s *Store) initTables() error {
 		return err
 	}
 
+	// 添加组排序号（如果不存在）
+	s.addColumnIfNotExists("groups", "sort_order", "INTEGER DEFAULT 0")
+
 	_, err = s.db.Exec(`CREATE INDEX IF NOT EXISTS idx_groups_parent ON groups(parent_id)`)
 	if err != nil {
 		return err
@@ -489,14 +492,14 @@ func (s *Store) buildGroupPath(parentID, name string) string {
 // GetGroup 获取单个分组
 func (s *Store) GetGroup(id string) (*Group, error) {
 	row := s.db.QueryRow(`
-		SELECT id, name, parent_id, path, created_at, updated_at
+		SELECT id, name, parent_id, path, sort_order, created_at, updated_at
 		FROM groups WHERE id = ?
 	`, id)
 
 	group := &Group{}
 	var createdAt, updatedAt sql.NullString
 	err := row.Scan(
-		&group.ID, &group.Name, &group.ParentID, &group.Path,
+		&group.ID, &group.Name, &group.ParentID, &group.Path, &group.SortOrder,
 		&createdAt, &updatedAt,
 	)
 	if err != nil {
@@ -538,17 +541,17 @@ func (s *Store) CreateGroup(group *Group) error {
 	group.Path = s.buildGroupPath(group.ParentID, group.Name)
 
 	_, err := s.db.Exec(`
-		INSERT INTO groups (id, name, parent_id, path, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?)
-	`, group.ID, group.Name, group.ParentID, group.Path, group.CreatedAt.Format(time.RFC3339), group.UpdatedAt.Format(time.RFC3339))
+		INSERT INTO groups (id, name, parent_id, path, sort_order, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+	`, group.ID, group.Name, group.ParentID, group.Path, group.SortOrder, group.CreatedAt.Format(time.RFC3339), group.UpdatedAt.Format(time.RFC3339))
 	return err
 }
 
 // ListGroups 列出所有分组
 func (s *Store) ListGroups() ([]*Group, error) {
 	rows, err := s.db.Query(`
-		SELECT id, name, parent_id, path, created_at, updated_at
-		FROM groups ORDER BY path
+		SELECT id, name, parent_id, path, sort_order, created_at, updated_at
+		FROM groups ORDER BY sort_order ASC, name ASC, path ASC
 	`)
 	if err != nil {
 		return nil, err
@@ -560,7 +563,7 @@ func (s *Store) ListGroups() ([]*Group, error) {
 		group := &Group{}
 		var createdAt, updatedAt sql.NullString
 		err := rows.Scan(
-			&group.ID, &group.Name, &group.ParentID, &group.Path,
+			&group.ID, &group.Name, &group.ParentID, &group.Path, &group.SortOrder,
 			&createdAt, &updatedAt,
 		)
 		if err != nil {
@@ -724,8 +727,8 @@ func (s *Store) updateChildPaths(parentID, oldParentPath, newParentPath string) 
 // GetChildGroups 获取子分组列表
 func (s *Store) GetChildGroups(parentID string) ([]*Group, error) {
 	rows, err := s.db.Query(`
-		SELECT id, name, parent_id, path, created_at, updated_at
-		FROM groups WHERE parent_id = ? ORDER BY name
+		SELECT id, name, parent_id, path, sort_order, created_at, updated_at
+		FROM groups WHERE parent_id = ? ORDER BY sort_order ASC, name ASC
 	`, parentID)
 	if err != nil {
 		return nil, err
@@ -737,7 +740,7 @@ func (s *Store) GetChildGroups(parentID string) ([]*Group, error) {
 		group := &Group{}
 		var createdAt, updatedAt sql.NullString
 		err := rows.Scan(
-			&group.ID, &group.Name, &group.ParentID, &group.Path,
+			&group.ID, &group.Name, &group.ParentID, &group.Path, &group.SortOrder,
 			&createdAt, &updatedAt,
 		)
 		if err != nil {
@@ -820,6 +823,31 @@ func (s *Store) ListGroupsTree() ([]*GroupNode, error) {
 	}
 
 	return rootNodes, nil
+}
+
+// ReorderGroups 批量更新分组的排序
+func (s *Store) ReorderGroups(groupIDs []string) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	now := time.Now().Format(time.RFC3339)
+	stmt, err := tx.Prepare(`UPDATE groups SET sort_order = ?, updated_at = ? WHERE id = ?`)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	for i, id := range groupIDs {
+		_, err := stmt.Exec(i, now, id)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
 }
 
 // ========== 个性化模板管理 ==========

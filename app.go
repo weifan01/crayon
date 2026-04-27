@@ -555,6 +555,11 @@ func (a *App) ListGroupsTree() ([]*session.GroupNode, error) {
 	return a.sessionStore.ListGroupsTree()
 }
 
+// ReorderGroups 重新排序分组
+func (a *App) ReorderGroups(groupIDs []string) error {
+	return a.sessionStore.ReorderGroups(groupIDs)
+}
+
 // generateID 生成唯一ID
 func generateID() string {
 	// 使用加密安全的随机数生成 ID

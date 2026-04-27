@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { X, Trash2, Folder, Pencil, Check, ChevronRight, ChevronDown, FolderTree, Plus, FolderPlus } from 'lucide-react'
+import { X, Trash2, Folder, Pencil, Check, ChevronRight, ChevronDown, FolderTree, Plus, FolderPlus, ArrowUp, ArrowDown } from 'lucide-react'
 import { useSessionStore } from '../stores/sessionStore'
 import { useLocale } from '../stores/localeStore'
 import type { GroupNode, Group } from '../api/wails'
@@ -9,7 +9,7 @@ interface Props {
 }
 
 export function GroupManager({ onClose }: Props) {
-  const { sessions, groups, groupsTree, loadGroups, loadGroupsTree, loadSessions, createGroup, updateGroup, deleteGroup, confirmDialog } = useSessionStore()
+  const { sessions, groups, groupsTree, loadGroups, loadGroupsTree, loadSessions, createGroup, updateGroup, deleteGroup, confirmDialog, reorderGroups } = useSessionStore()
   const { t } = useLocale()
   const [newGroupName, setNewGroupName] = useState('')
   const [newGroupParentId, setNewGroupParentId] = useState('')
@@ -136,7 +136,39 @@ export function GroupManager({ onClose }: Props) {
     return groups.filter(g => !excludePaths.includes(g.id))
   }
 
-  const renderGroupNode = (node: GroupNode, depth: number = 0): React.ReactNode => {
+  const handleMoveUp = async (siblings: GroupNode[], index: number) => {
+    if (index <= 0) return
+    setUpdating(true)
+    try {
+      const newIds = siblings.map(n => n.group.id)
+      const temp = newIds[index]
+      newIds[index] = newIds[index - 1]
+      newIds[index - 1] = temp
+      await reorderGroups(newIds)
+    } catch (e) {
+      alert((t('common.error') || 'Error') + ': ' + e)
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  const handleMoveDown = async (siblings: GroupNode[], index: number) => {
+    if (index >= siblings.length - 1) return
+    setUpdating(true)
+    try {
+      const newIds = siblings.map(n => n.group.id)
+      const temp = newIds[index]
+      newIds[index] = newIds[index + 1]
+      newIds[index + 1] = temp
+      await reorderGroups(newIds)
+    } catch (e) {
+      alert((t('common.error') || 'Error') + ': ' + e)
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  const renderGroupNode = (node: GroupNode, siblings: GroupNode[] = [], index: number = 0, depth: number = 0): React.ReactNode => {
     const g = node.group
     const hasChildren = node.children && node.children.length > 0
     const isExpanded = expandedGroups.has(g.id)
@@ -229,6 +261,26 @@ export function GroupManager({ onClose }: Props) {
                 >
                   <Trash2 size={14} />
                 </button>
+                {siblings.length > 1 && (
+                  <>
+                    <button
+                      onClick={() => handleMoveUp(siblings, index)}
+                      disabled={index === 0 || updating}
+                      className={`p-1.5 rounded transition-colors ${index === 0 ? 'text-text-muted/30 cursor-not-allowed' : 'hover:bg-surface-3 text-text-muted hover:text-text-primary'}`}
+                      title={t('common.moveUp') || '上移'}
+                    >
+                      <ArrowUp size={14} />
+                    </button>
+                    <button
+                      onClick={() => handleMoveDown(siblings, index)}
+                      disabled={index === siblings.length - 1 || updating}
+                      className={`p-1.5 rounded transition-colors ${index === siblings.length - 1 ? 'text-text-muted/30 cursor-not-allowed' : 'hover:bg-surface-3 text-text-muted hover:text-text-primary'}`}
+                      title={t('common.moveDown') || '下移'}
+                    >
+                      <ArrowDown size={14} />
+                    </button>
+                  </>
+                )}
               </>
             )}
           </div>
@@ -258,7 +310,7 @@ export function GroupManager({ onClose }: Props) {
         {/* 子分组 */}
         {hasChildren && isExpanded && (
           <div className="border-l border-surface-2/50 ml-6">
-            {node.children.map(child => renderGroupNode(child, depth + 1))}
+            {node.children.map((child, i) => renderGroupNode(child, node.children, i, depth + 1))}
           </div>
         )}
       </div>
@@ -348,7 +400,7 @@ export function GroupManager({ onClose }: Props) {
           </div>
         ) : (
           <div>
-            {groupsTree.map(node => renderGroupNode(node))}
+            {groupsTree.map((node, i) => renderGroupNode(node, groupsTree, i))}
           </div>
         )}
       </div>

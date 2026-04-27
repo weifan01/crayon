@@ -94,6 +94,7 @@ export interface Group {
   name: string
   parentId: string
   path: string
+  sortOrder: number
   createdAt: string
   updatedAt: string
 }
@@ -186,6 +187,7 @@ export const api = {
   listGroupsTree: (): Promise<GroupNode[]> => getWailsAPI().ListGroupsTree(),
   createGroup: (name: string, parentId: string): Promise<Group> => getWailsAPI().CreateGroup(name, parentId),
   updateGroup: (id: string, name: string, parentId: string): Promise<Group> => getWailsAPI().UpdateGroup(id, name, parentId),
+  reorderGroups: (groupIds: string[]): Promise<void> => getWailsAPI().ReorderGroups(groupIds),
   moveGroup: (id: string, newParentId: string): Promise<void> => getWailsAPI().MoveGroup(id, newParentId),
   deleteGroup: (id: string): Promise<void> => getWailsAPI().DeleteGroup(id),
 
