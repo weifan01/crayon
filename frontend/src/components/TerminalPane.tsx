@@ -360,7 +360,7 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
       zmodemRef.current = new TerminalZmodemController(
         term,
         (base64Data: string) => api.sendToTabBinary(connectionId, base64Data),
-        { onProgress: setZmodemProgress, translate: t },
+        { onProgress: setZmodemProgress, translate: t, getEncoding: () => session?.encoding || 'UTF-8' },
       )
       setSearchAddonReady(true)
 

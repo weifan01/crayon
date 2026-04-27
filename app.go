@@ -329,6 +329,15 @@ func (a *App) WriteFileString(path string, data string) error {
 	return os.WriteFile(path, []byte(data), 0644)
 }
 
+// WriteFileBase64 写入 base64 编码的字符串到文件
+func (a *App) WriteFileBase64(path string, base64Data string) error {
+	data, err := base64.StdEncoding.DecodeString(base64Data)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0644)
+}
+
 // FileExists 检查文件是否存在
 func (a *App) FileExists(path string) bool {
 	_, err := os.Stat(path)

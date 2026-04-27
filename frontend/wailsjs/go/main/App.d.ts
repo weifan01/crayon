@@ -154,4 +154,6 @@ export function WindowToggleFullscreen():Promise<void>;
 
 export function WriteFile(arg1:string,arg2:Array<number>):Promise<void>;
 
+export function WriteFileBase64(arg1:string,arg2:string):Promise<void>;
+
 export function WriteFileString(arg1:string,arg2:string):Promise<void>;

@@ -25,6 +25,7 @@ export interface ZmodemTransferProgress {
 interface ZmodemControllerOptions {
   onProgress?: (progress: ZmodemTransferProgress | null) => void
   translate?: (key: string, vars?: Record<string, string | number>) => string
+  getEncoding?: () => string
 }
 
 interface UploadContext {
@@ -33,24 +34,18 @@ interface UploadContext {
   retries: number
 }
 
-export function bytesToTerminalString(bytes: ArrayLike<number>): string {
-  const chars: string[] = []
-  const chunkSize = 0x2000
-
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    const chunkLength = Math.min(chunkSize, bytes.length - i)
-    const chunk = new Array<number>(chunkLength)
-    for (let j = 0; j < chunkLength; j++) {
-      chunk[j] = bytes[i + j]
-    }
-    chars.push(String.fromCharCode(...chunk))
-  }
-
-  return chars.join('')
+export function bytesToTerminalString(bytes: ArrayLike<number>, encoding: string = 'utf-8'): string {
+  const input = bytes instanceof Uint8Array ? bytes : Uint8Array.from(bytes)
+  return new TextDecoder(encoding).decode(input)
 }
 
 export function bytesToBase64(bytes: ArrayLike<number>): string {
-  return btoa(bytesToTerminalString(bytes))
+  const input = bytes instanceof Uint8Array ? bytes : Uint8Array.from(bytes)
+  let binary = ''
+  for (let i = 0; i < input.length; i++) {
+    binary += String.fromCharCode(input[i])
+  }
+  return btoa(binary)
 }
 
 export function base64ToBytes(value: string): Uint8Array {
@@ -87,7 +82,7 @@ function concatPayloads(payloads: Array<Uint8Array | number[]>): Uint8Array {
 }
 
 async function writeDownloadFile(targetPath: string, bytes: Uint8Array) {
-  await api.writeFile(targetPath, Array.from(bytes))
+  await api.writeFileBase64(targetPath, bytesToBase64(bytes))
 }
 
 export class TerminalZmodemController {
@@ -103,6 +98,8 @@ export class TerminalZmodemController {
   private lastProgressEmitAt = 0
   private uploadContext: UploadContext | null = null
   private retryTask: Promise<void> | null = null
+  private _decoder: TextDecoder | null = null
+  private _decoderEncoding: string = ''
 
   constructor(terminal: Terminal, sendBinary: (base64Data: string) => Promise<void>, options: ZmodemControllerOptions = {}) {
     this.terminal = terminal
@@ -111,7 +108,13 @@ export class TerminalZmodemController {
 
     this.sentry = new Zmodem.Sentry({
       to_terminal: (octets: ArrayLike<number>) => {
-        const text = bytesToTerminalString(octets)
+        const encoding = this.options.getEncoding?.() || 'utf-8'
+        if (this._decoderEncoding !== encoding || !this._decoder) {
+          this._decoder = new TextDecoder(encoding)
+          this._decoderEncoding = encoding
+        }
+        const input = octets instanceof Uint8Array ? octets : Uint8Array.from(octets)
+        const text = this._decoder.decode(input, { stream: true })
         if (text) {
           this.terminal.write(text)
         }
@@ -390,7 +393,7 @@ export class TerminalZmodemController {
     const files = await Promise.all(
       selectedFiles.map(async filePath => ({
         name: basename(filePath),
-        bytes: Uint8Array.from(await api.readFile(filePath)),
+        bytes: base64ToBytes(await api.readFileBase64(filePath)),
         mtime: new Date(),
       })),
     )

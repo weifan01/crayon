@@ -298,6 +298,10 @@ export function WriteFile(arg1, arg2) {
   return window['go']['main']['App']['WriteFile'](arg1, arg2);
 }
 
+export function WriteFileBase64(arg1, arg2) {
+  return window['go']['main']['App']['WriteFileBase64'](arg1, arg2);
+}
+
 export function WriteFileString(arg1, arg2) {
   return window['go']['main']['App']['WriteFileString'](arg1, arg2);
 }

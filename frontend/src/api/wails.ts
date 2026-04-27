@@ -249,6 +249,7 @@ export const api = {
   readFile: (path: string): Promise<number[]> => getWailsAPI().ReadFile(path),
   writeFileString: (path: string, data: string): Promise<void> => getWailsAPI().WriteFileString(path, data),
   writeFile: (path: string, data: number[]): Promise<void> => getWailsAPI().WriteFile(path, data),
+  writeFileBase64: (path: string, base64Data: string): Promise<void> => getWailsAPI().WriteFileBase64(path, base64Data),
   readFileString: (path: string): Promise<string> => getWailsAPI().ReadFileString(path),
   readFileBase64: (path: string): Promise<string> => getWailsAPI().ReadFileBase64(path),
 
