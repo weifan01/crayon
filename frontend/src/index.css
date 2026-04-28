@@ -867,30 +867,9 @@ select.input-field option {
   height: 100%;
 }
 
-.xterm-rows {
-  padding: 0 4px;
-}
 
-/* 终端选中样式增强 - 高对比度 */
-.xterm .xterm-selection div,
-.xterm-screen .xterm-selection div,
-.xterm-selection div {
-  background-color: rgba(80, 140, 255, 0.45) !important;
-}
 
-/* 选中文字样式 */
-.xterm .xterm-selection,
-.xterm-screen .xterm-selection {
-  background-color: rgba(80, 140, 255, 0.45) !important;
-}
 
-/* 全局背景模式下终端选中样式 - 更高对比度 */
-html[data-custom-bg="app"] .xterm .xterm-selection div,
-html[data-custom-bg="app"] .xterm-selection div,
-html[data-custom-bg="both"] .xterm .xterm-selection div,
-html[data-custom-bg="both"] .xterm-selection div {
-  background-color: rgba(100, 160, 255, 0.55) !important;
-}
 
 /* 全局选中样式 - 输入框等 */
 ::selection {

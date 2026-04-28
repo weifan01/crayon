@@ -24,6 +24,19 @@ declare global {
 
 interface Props { tabId: string; paneId: string; isActive: boolean }
 
+// 辅助函数：提供实色选择背景，避免半透明背景色与原本带底色或不同前景色的文本混合后失去辨识度
+function getSystemSelectionBackground(bgColor: string): string {
+  if (!bgColor || !bgColor.startsWith('#') || bgColor.length < 7) return '#5c5c5c'
+  const hex = bgColor.replace('#', '')
+  const r = parseInt(hex.substring(0, 2), 16) || 0
+  const g = parseInt(hex.substring(2, 4), 16) || 0
+  const b = parseInt(hex.substring(4, 6), 16) || 0
+  const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000
+  // 暗色主题：使用实体的中灰色（#5c5c5c），能够完全覆盖掉文字本身的各种底色
+  // 亮色主题：实体的浅灰色（#c0c0c0）
+  return yiq < 128 ? '#5c5c5c' : '#c0c0c0'
+}
+
 // 辅助函数：在节点树中查找 pane 的 sessionId（使用 paneUtils 的 findPane）
 function findPaneSessionId(node: PaneNode, targetPaneId: string): string | undefined {
   return findPane(node, targetPaneId)?.sessionId
@@ -261,7 +274,7 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
         background: effectiveTerminalBg,
         foreground: effectiveConfig.theme.colors.foreground,
         cursor: effectiveConfig.theme.colors.cursor,
-        selectionBackground: effectiveConfig.theme.colors.selectionBackground,
+        selectionBackground: getSystemSelectionBackground(effectiveConfig.theme.colors.background),
         black: effectiveConfig.theme.colors.black,
         red: effectiveConfig.theme.colors.red,
         green: effectiveConfig.theme.colors.green,
@@ -311,7 +324,7 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
           background: effectiveTerminalBg,
           foreground: effectiveConfig.theme.colors.foreground,
           cursor: effectiveConfig.theme.colors.cursor,
-          selectionBackground: effectiveConfig.theme.colors.selectionBackground,
+          selectionBackground: getSystemSelectionBackground(effectiveConfig.theme.colors.background),
           black: effectiveConfig.theme.colors.black,
           red: effectiveConfig.theme.colors.red,
           green: effectiveConfig.theme.colors.green,
@@ -683,7 +696,7 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
         background: effectiveTerminalBg,
         foreground: effectiveConfig.theme.colors.foreground,
         cursor: effectiveConfig.theme.colors.cursor,
-        selectionBackground: effectiveConfig.theme.colors.selectionBackground,
+        selectionBackground: getSystemSelectionBackground(effectiveConfig.theme.colors.background),
         black: effectiveConfig.theme.colors.black,
         red: effectiveConfig.theme.colors.red,
         green: effectiveConfig.theme.colors.green,
