@@ -186,9 +186,20 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
 
   // 处理缓冲的数据
   const flushBuffer = () => {
-    if (zmodemRef.current && dataBufferRef.current.length > 0) {
-      dataBufferRef.current.forEach(data => {
-        zmodemRef.current!.consume(data)
+    if (termRef.current && dataBufferRef.current.length > 0) {
+      dataBufferRef.current.forEach(base64Data => {
+        // 同样需要解码后写入
+        const binaryString = window.atob(base64Data)
+        const bytes = new Uint8Array(binaryString.length)
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i)
+        }
+        
+        if (zmodemRef.current) {
+          zmodemRef.current.consume(base64Data)
+        } else {
+          termRef.current?.write(bytes)
+        }
       })
       dataBufferRef.current = []
     }
@@ -613,7 +624,7 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
         api.needLocalEcho(connectionId).then(needEcho => {
           localEchoRef.current = needEcho
         }).catch(() => {
-          localEchoRef.current = true // 查询失败时保持本地回显
+          localEchoRef.current = false
         })
       } else if (status === 'connecting') {
         // 正在连接中，等待
@@ -626,7 +637,7 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
               const needEcho = await api.needLocalEcho(connectionId)
               localEchoRef.current = needEcho
             } catch (e) {
-              localEchoRef.current = true // 查询失败时保持本地回显
+              localEchoRef.current = false // SSH/Shell 场景下默认为 false 更安全
             }
           })
           .catch(e => {
@@ -643,11 +654,24 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
     const echoChangeEvent = `telnet-echo-change-${connectionId}`
 
     const handleData = (base64Data: string) => {
-      if (termRef.current && zmodemRef.current) {
+      if (!termRef.current) {
+        dataBufferRef.current.push(base64Data)
+        return
+      }
+
+      // 必须始终让 Zmodem 控制器消费数据，以便它能检测到 sz/rz 的握手信号
+      if (zmodemRef.current) {
         zmodemRef.current.consume(base64Data)
         termRef.current.scrollToBottom()
       } else {
-        dataBufferRef.current.push(base64Data)
+        // 如果 Zmodem 还没准备好，解码 Base64 并直接写入（兜底逻辑）
+        const binaryString = window.atob(base64Data)
+        const bytes = new Uint8Array(binaryString.length)
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i)
+        }
+        termRef.current.write(bytes)
+        termRef.current.scrollToBottom()
       }
     }
 
