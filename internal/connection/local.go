@@ -133,11 +133,38 @@ func (c *LocalShellConnection) Connect() error {
 	}
 
 	// 设置环境变量
+	env := os.Environ()
+	// 注入自定义环境变量
 	if len(c.env) > 0 {
-		cmd.Env = c.env
-	} else {
-		cmd.Env = os.Environ()
+		env = append(env, c.env...)
 	}
+	// 确保关键终端变量存在
+	hasTerm := false
+	for _, e := range env {
+		if strings.HasPrefix(e, "TERM=") {
+			hasTerm = true
+			break
+		}
+	}
+	if !hasTerm {
+		env = append(env, "TERM=xterm-256color")
+	}
+	// 确保语言变量存在，防止宽字符（图标）导致的光标偏移
+	hasLang := false
+	for _, e := range env {
+		if strings.HasPrefix(e, "LANG=") {
+			hasLang = true
+			break
+		}
+	}
+	if !hasLang {
+		env = append(env, "LANG=en_US.UTF-8")
+	}
+	env = append(env, "LC_ALL=en_US.UTF-8")
+	
+	// 注入真彩支持
+	env = append(env, "COLORTERM=truecolor")
+	cmd.Env = env
 
 	// 启动PTY
 	ptmx, err := pty.Start(cmd)

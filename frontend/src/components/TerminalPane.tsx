@@ -74,7 +74,7 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
   const { connectTab, disconnectTab, getTabStatus, setTabStatus, sendToTab, resizeTab, sessions } = useSessionStore()
   const { getTerminalTheme, getTerminalThemeById, getThemeById, terminalSettings, currentTheme, backgroundSettings } = useSettingsStore()
   const { t } = useLocale()
-  const localEchoRef = useRef<boolean>(true) // 默认启用本地回显，等待协商结果
+  const localEchoRef = useRef<boolean>(false) // 默认禁用本地回显，由服务端控制回显
 
   // 全局背景是否应用到终端（scope 为 'terminal' 或 'both'）
   const hasGlobalTerminalBg = backgroundSettings.enabled &&
