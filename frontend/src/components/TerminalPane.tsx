@@ -7,6 +7,7 @@ import 'xterm/css/xterm.css'
 import { useSessionStore } from '../stores/sessionStore'
 import { useTerminalStore, type PaneNode } from '../stores/terminalStore'
 import { useSettingsStore } from '../stores/settingsStore'
+import { themeToCssVariables } from './themes'
 import { useLocale } from '../stores/localeStore'
 import { findPane, paneExistsInTree } from '../utils/paneUtils'
 import { api } from '../api/wails'
@@ -71,7 +72,7 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
   const eventsRegisteredRef = useRef(false)
 
   const { connectTab, disconnectTab, getTabStatus, setTabStatus, sendToTab, resizeTab, sessions } = useSessionStore()
-  const { getTerminalTheme, getTerminalThemeById, terminalSettings, currentTheme, backgroundSettings } = useSettingsStore()
+  const { getTerminalTheme, getTerminalThemeById, getThemeById, terminalSettings, currentTheme, backgroundSettings } = useSettingsStore()
   const { t } = useLocale()
   const localEchoRef = useRef<boolean>(true) // 默认启用本地回显，等待协商结果
 
@@ -94,34 +95,46 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
   const useCustom = session?.useCustomSettings
 
   // 计算有效配置
+  // 注意：对数字类型字段使用 ?? 而非 &&...? 模式，避免 0 被误判为 falsy
   const effectiveConfig = useMemo(() => {
     const sessionTheme = useCustom && session?.themeId ? getTerminalThemeById(session.themeId) : null
     const effectiveTheme = sessionTheme || terminalTheme
     return {
       theme: effectiveTheme,
-      fontFamily: useCustom && session?.fontFamily ? session.fontFamily : terminalSettings.fontFamily,
-      fontSize: useCustom && session?.fontSize ? session.fontSize : terminalSettings.fontSize,
-      lineHeight: useCustom && session?.lineHeight ? session.lineHeight : 1.2,
-      letterSpacing: useCustom && session?.letterSpacing ? session.letterSpacing : 0,
+      // 字符串字段：空字符串视为"未设置"，回退到全局设置
+      fontFamily: (useCustom && session?.fontFamily) ? session.fontFamily : terminalSettings.fontFamily,
+      // 数字字段：使用 ?? 保证 0 能正确生效
+      fontSize: useCustom ? (session?.fontSize ?? terminalSettings.fontSize) : terminalSettings.fontSize,
+      lineHeight: useCustom ? (session?.lineHeight ?? 1.2) : 1.2,
+      letterSpacing: useCustom ? (session?.letterSpacing ?? 0) : 0,
       cursorBlink: useCustom ? (session?.cursorBlink ?? true) : true,
-      cursorStyle: useCustom && session?.cursorStyle ? session.cursorStyle : 'block',
-      scrollback: useCustom && session?.scrollback ? session.scrollback : 10000,
-      // 背景图设置
-      backgroundImage: useCustom && session?.backgroundImage ? session.backgroundImage : '',
-      backgroundOpacity: useCustom && session?.backgroundOpacity ? session.backgroundOpacity : 50,
-      backgroundBlur: useCustom && session?.backgroundBlur ? session.backgroundBlur : 0,
+      cursorStyle: (useCustom && session?.cursorStyle) ? session.cursorStyle : 'block',
+      scrollback: useCustom ? (session?.scrollback ?? 10000) : 10000,
+      // 背景图设置：字符串路径用 && 判断，数字透明度/模糊用 ?? 保证 0 可用
+      backgroundImage: (useCustom && session?.backgroundImage) ? session.backgroundImage : '',
+      backgroundOpacity: useCustom ? (session?.backgroundOpacity ?? 50) : 50,
+      backgroundBlur: useCustom ? (session?.backgroundBlur ?? 0) : 0,
     }
   }, [useCustom, session, terminalTheme, terminalSettings, getTerminalThemeById])
 
   // 计算终端的背景色（有背景图时透明）
   const effectiveTerminalBg = useMemo(() => {
-    // 会话有个性化背景时透明
-    if (useCustom && session?.backgroundImage) return 'transparent'
-    // 全局有终端背景时透明
+    if (useCustom) {
+      // 开启了个性化设置：如果有自己的背景图则透明，否则使用个性化主题的背景色（隔离全局背景图）
+      return session?.backgroundImage ? 'transparent' : effectiveConfig.theme.colors.background
+    }
+    // 未开启个性化设置：跟随全局背景图逻辑
     if (hasGlobalTerminalBg) return 'transparent'
-    // 其他情况使用主题背景色
     return effectiveConfig.theme.colors.background
   }, [useCustom, session?.backgroundImage, hasGlobalTerminalBg, effectiveConfig.theme.colors.background])
+
+  // 如果启用了个性化主题，生成该主题对应的 CSS 变量，用于覆盖全局作用域（如滚动条等）
+  const sessionCssVars = useMemo(() => {
+    if (!useCustom || !session?.themeId) return undefined
+    const theme = getThemeById(session.themeId)
+    if (!theme) return undefined
+    return themeToCssVariables(theme)
+  }, [useCustom, session?.themeId, getThemeById])
 
   // paneId 作为连接标识符
   const connectionId = paneId
@@ -765,7 +778,10 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
   }, [hasSessionBackground, backgroundImageData, effectiveConfig.backgroundOpacity, effectiveConfig.backgroundBlur])
 
   return (
-    <div className={`h-full w-full relative flex flex-col terminal-bg overflow-hidden ${hasSessionBackground ? 'has-session-bg' : ''}`}>
+    <div
+      className={`h-full w-full relative flex flex-col terminal-bg overflow-hidden ${hasSessionBackground ? 'has-session-bg' : ''}`}
+      style={sessionCssVars as React.CSSProperties}
+    >
       {/* 背景图层 - 仅在会话有个性化背景时显示 */}
       {backgroundStyle && (
         <div
@@ -788,7 +804,7 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
         ref={ref}
         className="flex-1 w-full overflow-hidden relative z-10"
         style={{
-          backgroundColor: (hasSessionBackground || hasGlobalTerminalBg)
+          backgroundColor: (hasSessionBackground || (!useCustom && hasGlobalTerminalBg))
             ? 'transparent'
             : effectiveConfig.theme.colors.background
         }}

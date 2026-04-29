@@ -228,8 +228,10 @@ func (s *Store) CreateSession(session *Session) error {
 			id, name, group_path, description, protocol, host, port, user,
 			auth_type, password, key_path, key_passphrase, keep_alive,
 			proxy_jump, proxy_command, terminal_type, font_size, font_family,
-			theme_id, encoding, login_script, tags, created_at, updated_at, last_used_at, local_env
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			theme_id, encoding, login_script, tags, created_at, updated_at, last_used_at, local_env,
+			use_custom_settings, template_id, scrollback, background_image, background_opacity, background_blur,
+			cursor_style, cursor_blink, line_height, letter_spacing
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`,
 		session.ID, session.Name, session.Group, session.Description,
 		string(session.Protocol), session.Host, session.Port, session.User,
@@ -238,6 +240,8 @@ func (s *Store) CreateSession(session *Session) error {
 		session.TerminalType, session.FontSize, session.FontFamily,
 		session.ThemeID, session.Encoding, string(loginScriptJSON), string(tagsJSON),
 		createdAtStr, updatedAtStr, "", string(localEnvJSON),
+		session.UseCustomSettings, session.TemplateID, session.Scrollback, session.BackgroundImage, session.BackgroundOpacity, session.BackgroundBlur,
+		session.CursorStyle, session.CursorBlink, session.LineHeight, session.LetterSpacing,
 	)
 	return err
 }
@@ -469,6 +473,17 @@ func (s *Store) CloneSession(id string) (*Session, error) {
 	cloned.Parity = original.Parity
 	cloned.LoginScript = original.LoginScript
 	cloned.Tags = original.Tags
+	// 复制个性化设置字段
+	cloned.UseCustomSettings = original.UseCustomSettings
+	cloned.TemplateID = original.TemplateID
+	cloned.Scrollback = original.Scrollback
+	cloned.BackgroundImage = original.BackgroundImage
+	cloned.BackgroundOpacity = original.BackgroundOpacity
+	cloned.BackgroundBlur = original.BackgroundBlur
+	cloned.CursorStyle = original.CursorStyle
+	cloned.CursorBlink = original.CursorBlink
+	cloned.LineHeight = original.LineHeight
+	cloned.LetterSpacing = original.LetterSpacing
 
 	if err := s.CreateSession(cloned); err != nil {
 		return nil, err

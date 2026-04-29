@@ -299,6 +299,9 @@ export function SettingsPanel({ onClose }: Props) {
       name: `${sourceTheme.name} (${t('theme.copy')})`,
       author: 'User',
       description: `${t('theme.copySuccess')}: ${sourceTheme.name}`,
+      // 清除 style 属性：自定义主题不应继承蜡笔主题的 data-theme-style
+      // 否则即使改了 CSS 变量也会被蜡笔主题的 CSS 规则重新覆盖背景色
+      style: undefined,
     }
     createCustomTheme(newTheme)  // createCustomTheme 已经会自动应用主题
   }
@@ -505,10 +508,11 @@ export function SettingsPanel({ onClose }: Props) {
     { id: 'about' as TabId, label: t('settings.about'), icon: Info },
   ]
 
-  const displayTheme = previewTheme || appThemes.find(t => t.id === currentTheme) || appThemes[0]
+  // 同时查找预设主题和自定义主题，避免自定义主题激活时 preview 回落到默认主题
+  const displayTheme = previewTheme || [...appThemes, ...themes.filter(t => !appThemes.some(p => p.id === t.id))].find(t => t.id === currentTheme) || appThemes[0]
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50">
+    <div className="settings-panel fixed inset-0 flex items-center justify-center z-50">
       <div
         ref={panelRef}
         className="dialog-panel max-h-[85vh] overflow-hidden flex relative"

@@ -424,40 +424,40 @@ html[data-theme-style="crayon-dark"] body::before {
    暖色蜡笔主题背景颜色
    ======================================== */
 
-/* 暖色蜡笔主题 - 应用到实际可见的容器 */
+/* 暖色蜡笔主题 - 应用到实际可见的容器（使用 CSS 变量，使自定义主题颜色优先生效）*/
 html[data-theme-style="crayon-warm"] body,
 html[data-theme-style="crayon-warm"] #root,
 html[data-theme-style="crayon-warm"] .bg-surface-0 {
-  background-color: #fef6e8 !important;
+  background-color: var(--surface-0);
 }
 
 /* 暖色蜡笔主题的侧边栏颜色 */
 html[data-theme-style="crayon-warm"] .bg-surface-1 {
-  background-color: #fbf0d8 !important;
+  background-color: var(--surface-1);
 }
 
 html[data-theme-style="crayon-warm"] .bg-surface-2 {
-  background-color: #f7e4c8 !important;
+  background-color: var(--surface-2);
 }
 
 /* ========================================
    暗色蜡笔主题背景颜色
    ======================================== */
 
-/* 暗色蜡笔主题 - 应用到实际可见的容器 */
+/* 暗色蜡笔主题 - 应用到实际可见的容器（使用 CSS 变量，使自定义主题颜色优先生效）*/
 html[data-theme-style="crayon-dark"] body,
 html[data-theme-style="crayon-dark"] #root,
 html[data-theme-style="crayon-dark"] .bg-surface-0 {
-  background-color: #1a1625 !important;
+  background-color: var(--surface-0);
 }
 
 /* 暗色蜡笔主题的侧边栏颜色 */
 html[data-theme-style="crayon-dark"] .bg-surface-1 {
-  background-color: #221e30 !important;
+  background-color: var(--surface-1);
 }
 
 html[data-theme-style="crayon-dark"] .bg-surface-2 {
-  background-color: #2a2638 !important;
+  background-color: var(--surface-2);
 }
 
 /* ========================================
