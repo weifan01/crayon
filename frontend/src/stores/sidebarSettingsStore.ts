@@ -5,12 +5,14 @@ type SidebarMode = 'always-show' | 'auto-hide'
 interface SidebarSettings {
   width: number
   mode: SidebarMode
+  bottomMenuMode?: SidebarMode
 }
 
 interface SettingsState {
   sidebar: SidebarSettings
   setSidebarWidth: (width: number) => void
   setSidebarMode: (mode: SidebarMode) => void
+  setBottomMenuMode: (mode: SidebarMode) => void
 }
 
 const STORAGE_KEY = 'crayon-sidebar-settings'
@@ -29,7 +31,7 @@ const loadSettings = (): SidebarSettings => {
   } catch (e) {
     console.error('Failed to load sidebar settings:', e)
   }
-  return { width: 256, mode: 'always-show' }
+  return { width: 256, mode: 'always-show', bottomMenuMode: 'always-show' }
 }
 
 const saveSettings = (settings: SidebarSettings) => {
@@ -51,6 +53,12 @@ export const useSidebarSettings = create<SettingsState>((set, get) => ({
 
   setSidebarMode: (mode: SidebarMode) => {
     const newSettings = { ...get().sidebar, mode }
+    saveSettings(newSettings)
+    set({ sidebar: newSettings })
+  },
+
+  setBottomMenuMode: (mode: SidebarMode) => {
+    const newSettings = { ...get().sidebar, bottomMenuMode: mode }
     saveSettings(newSettings)
     set({ sidebar: newSettings })
   },

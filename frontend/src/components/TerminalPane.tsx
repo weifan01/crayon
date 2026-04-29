@@ -17,7 +17,7 @@ import { TerminalSearchBar } from './TerminalSearchBar'
 declare global {
   interface Window {
     runtime: {
-      EventsOn: (event: string, callback: (...args: any[]) => void) => void
+      EventsOn: (event: string, callback: (...args: any[]) => void) => () => void
       EventsOff: (event: string) => void
     }
   }
@@ -149,6 +149,7 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
 
   // 加载会话背景图
   useEffect(() => {
+    let ignore = false
     const imagePath = effectiveConfig.backgroundImage
     if (!imagePath) {
       setBackgroundImageData('')
@@ -161,6 +162,7 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
     }
     // 否则通过 API 加载图片并添加 MIME 前缀
     api.loadBackgroundImage(imagePath).then(base64 => {
+      if (ignore) return
       // 根据文件扩展名确定 MIME 类型
       const ext = imagePath.toLowerCase().split('.').pop()
       const mimeTypes: Record<string, string> = {
@@ -174,9 +176,12 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
       const mimeType = mimeTypes[ext || ''] || 'image/png'
       setBackgroundImageData(`data:${mimeType};base64,${base64}`)
     }).catch(err => {
+      if (ignore) return
       console.error('Failed to load session background image:', err)
       setBackgroundImageData('')
     })
+    
+    return () => { ignore = true }
   }, [effectiveConfig.backgroundImage])
 
   // 处理缓冲的数据
@@ -522,6 +527,7 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
     document.addEventListener('fullscreenchange', handleFullscreenChange)
 
     // 监听 Wails 窗口全屏变化事件
+    let unbindWailsFullscreen: (() => void) | undefined
     const handleWailsFullscreen = () => {
       handleResize()
       setTimeout(() => handleResize(), 50)
@@ -529,14 +535,14 @@ export function TerminalPane({ tabId, paneId, isActive }: Props) {
       setTimeout(() => handleResize(), 300)
     }
     if (window.runtime) {
-      window.runtime.EventsOn('window-fullscreen-changed', handleWailsFullscreen)
+      unbindWailsFullscreen = window.runtime.EventsOn('window-fullscreen-changed', handleWailsFullscreen)
     }
 
     return () => {
       window.removeEventListener('resize', handleWindowResize)
       document.removeEventListener('fullscreenchange', handleFullscreenChange)
-      if (window.runtime) {
-        window.runtime.EventsOff('window-fullscreen-changed')
+      if (unbindWailsFullscreen) {
+        unbindWailsFullscreen()
       }
       resizeObserver.disconnect()
       terminalElement.removeEventListener('contextmenu', handleContextMenu)

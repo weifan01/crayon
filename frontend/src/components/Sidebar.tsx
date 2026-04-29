@@ -32,7 +32,7 @@ interface GroupContextMenuState {
 
 export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }: Props) {
   const { sessions, groups, groupsTree, loading, loadSessions, loadGroups, loadGroupsTree, createSession, updateSession, deleteSession, cloneSession, searchSessions, getSessionStatus, confirmDialog, updateGroup } = useSessionStore()
-  const { sidebar, setSidebarWidth, setSidebarMode } = useSidebarSettings()
+  const { sidebar, setSidebarWidth, setSidebarMode, setBottomMenuMode } = useSidebarSettings()
   const { sidebarTagSettings } = useSettingsStore()
   const { t } = useLocale()
 
@@ -54,6 +54,7 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
   const [groupContextMenu, setGroupContextMenu] = useState<GroupContextMenuState | null>(null)
   const [isResizing, setIsResizing] = useState(false)
   const [isHovered, setIsHovered] = useState(false)  // 默认 false，自动隐藏时先显示触发条
+  const [isBottomMenuHovered, setIsBottomMenuHovered] = useState(false)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['ungrouped']))
 
   // 多选状态
@@ -948,57 +949,90 @@ export function Sidebar({ onDoubleClickSession, onOpenSettings, onQuickConnect }
       </div>
 
       {/* 底部操作栏 */}
-      <div className="p-2 border-t border-surface-2 space-y-1">
-        {/* 批量操作（多选时显示） */}
-        {selectedSessions.size > 1 && (
-          <div className="flex gap-1 pb-1 border-b border-surface-2 mb-1">
-            <div className="relative flex-1">
-              <button
-                onClick={e => { e.stopPropagation(); setShowBatchGroupMenu(!showBatchGroupMenu) }}
-                className="sidebar-item text-sm w-full justify-center bg-surface-2"
-              >
-                <MoveRight size={14} />
-                <span>{t('batch.moveToGroup')}</span>
-              </button>
-              {showBatchGroupMenu && (
-                <div
-                  className="absolute bottom-full left-0 mb-1 bg-surface-1 border border-surface-2 rounded-lg shadow-xl py-1 min-w-[120px] z-50"
-                  onClick={e => e.stopPropagation()}
-                >
-                  <div
-                    className="px-3 py-2 text-sm text-text-primary hover:bg-surface-2 cursor-pointer"
-                    onMouseDown={e => e.stopPropagation()}
-                    onClick={() => handleBatchMoveToGroup('')}
-                  >
-                    {t('batch.ungrouped')}
-                  </div>
-                  {groups.map(g => (
-                    <div
-                      key={g.id}
-                      className="px-3 py-2 text-sm text-text-primary hover:bg-surface-2 cursor-pointer"
-                      onMouseDown={e => e.stopPropagation()}
-                      onClick={() => handleBatchMoveToGroup(g.path)}
-                    >
-                      {g.path}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            <button
-              onClick={handleBatchDelete}
-              className="sidebar-item text-sm flex-1 justify-center bg-surface-2 hover:bg-red-500/20 hover:text-accent-red"
-            >
-              <Trash2 size={14} />
-              <span>{t('batch.delete')}</span>
-            </button>
+      <div 
+        className="border-t border-surface-2 bg-surface-1 shrink-0 flex flex-col transition-all relative"
+        onMouseEnter={() => sidebar.bottomMenuMode === 'auto-hide' && setIsBottomMenuHovered(true)}
+        onMouseLeave={() => sidebar.bottomMenuMode === 'auto-hide' && setIsBottomMenuHovered(false)}
+      >
+        {/* 悬停触发区 (在折叠且未悬停时显示) */}
+        {sidebar.bottomMenuMode === 'auto-hide' && !isBottomMenuHovered && !showBatchGroupMenu && (
+          <div className="h-4 w-full flex items-center justify-center cursor-pointer hover:bg-surface-2/50 text-text-muted transition-colors">
+            <ChevronDown size={12} className="rotate-180" />
           </div>
         )}
-        <button onClick={() => setShowQuickConnect(true)} className="sidebar-item text-sm"><Zap size={16} className={sidebarTagSettings.coloredIcons ? 'text-accent-yellow' : ''} /><span>{t('sidebar.quickConnect')}</span></button>
-        <button onClick={handleNew} className="sidebar-item text-sm"><Plus size={16} className={sidebarTagSettings.coloredIcons ? 'text-accent-green' : ''} /><span>{t('sidebar.newSession')}</span></button>
-        <button onClick={() => setShowGroups(true)} className="sidebar-item text-sm"><FolderPlus size={16} className={sidebarTagSettings.coloredIcons ? 'text-accent-blue' : ''} /><span>{t('sidebar.groupManage')}</span></button>
-        <button onClick={() => setShowCommands(true)} className="sidebar-item text-sm"><Terminal size={16} className={sidebarTagSettings.coloredIcons ? 'text-purple-400' : ''} /><span>{t('sidebar.commandLibrary')}</span></button>
-        <button onClick={onOpenSettings} className="sidebar-item text-sm"><Settings size={16} /><span>{t('sidebar.settings')}</span></button>
+
+        {/* 实际菜单内容 (常驻或悬停时显示) */}
+        {(sidebar.bottomMenuMode !== 'auto-hide' || isBottomMenuHovered || showBatchGroupMenu) && (
+          <div className="p-2 flex flex-col gap-1 relative">
+            {/* 右上角的图钉按钮 */}
+            <div className="absolute right-2 top-2 z-10">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setBottomMenuMode?.(sidebar.bottomMenuMode === 'always-show' ? 'auto-hide' : 'always-show')
+                }}
+                className={`p-1 hover:bg-surface-2 rounded transition-colors ${sidebar.bottomMenuMode === 'always-show' ? 'text-accent-blue opacity-100' : 'text-text-secondary opacity-50 hover:opacity-100'}`}
+                title={sidebar.bottomMenuMode === 'always-show' ? t('sidebar.alwaysShow') : t('sidebar.autoHide')}
+              >
+                <Pin size={12} />
+              </button>
+            </div>
+
+            {/* 批量操作（多选时显示） */}
+            {selectedSessions.size > 1 && (
+              <div className="flex gap-1 pb-1 border-b border-surface-2 mb-1 pr-6">
+                <div className="relative flex-1">
+                  <button
+                    onClick={e => { e.stopPropagation(); setShowBatchGroupMenu(!showBatchGroupMenu) }}
+                    className="sidebar-item text-sm w-full justify-center bg-surface-2"
+                  >
+                    <MoveRight size={14} />
+                    <span>{t('batch.moveToGroup')}</span>
+                  </button>
+                  {showBatchGroupMenu && (
+                    <div
+                      className="absolute bottom-full left-0 mb-1 bg-surface-1 border border-surface-2 rounded-lg shadow-xl py-1 min-w-[120px] z-50"
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <div
+                        className="px-3 py-2 text-sm text-text-primary hover:bg-surface-2 cursor-pointer"
+                        onMouseDown={e => e.stopPropagation()}
+                        onClick={() => handleBatchMoveToGroup('')}
+                      >
+                        {t('batch.ungrouped')}
+                      </div>
+                      {groups.map(g => (
+                        <div
+                          key={g.id}
+                          className="px-3 py-2 text-sm text-text-primary hover:bg-surface-2 cursor-pointer"
+                          onMouseDown={e => e.stopPropagation()}
+                          onClick={() => handleBatchMoveToGroup(g.path)}
+                        >
+                          {g.path}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={handleBatchDelete}
+                  className="sidebar-item text-sm flex-1 justify-center bg-surface-2 hover:bg-red-500/20 hover:text-accent-red"
+                >
+                  <Trash2 size={14} />
+                  <span>{t('batch.delete')}</span>
+                </button>
+              </div>
+            )}
+            
+            <div className={`${selectedSessions.size <= 1 ? 'pr-6' : ''} flex flex-col gap-1`}>
+              <button onClick={() => setShowQuickConnect(true)} className="sidebar-item text-sm"><Zap size={16} className={sidebarTagSettings.coloredIcons ? 'text-accent-yellow' : ''} /><span>{t('sidebar.quickConnect')}</span></button>
+              <button onClick={handleNew} className="sidebar-item text-sm"><Plus size={16} className={sidebarTagSettings.coloredIcons ? 'text-accent-green' : ''} /><span>{t('sidebar.newSession')}</span></button>
+              <button onClick={() => setShowGroups(true)} className="sidebar-item text-sm"><FolderPlus size={16} className={sidebarTagSettings.coloredIcons ? 'text-accent-blue' : ''} /><span>{t('sidebar.groupManage')}</span></button>
+              <button onClick={() => setShowCommands(true)} className="sidebar-item text-sm"><Terminal size={16} className={sidebarTagSettings.coloredIcons ? 'text-purple-400' : ''} /><span>{t('sidebar.commandLibrary')}</span></button>
+              <button onClick={onOpenSettings} className="sidebar-item text-sm"><Settings size={16} /><span>{t('sidebar.settings')}</span></button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 会话编辑对话框 */}
